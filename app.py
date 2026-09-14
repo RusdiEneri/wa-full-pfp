@@ -5,6 +5,15 @@ import subprocess
 import urllib.request
 import tarfile
 
+# Mock @spaces.GPU untuk mencegah error jika Space tidak sengaja di-set ke ZeroGPU
+try:
+    import spaces
+    @spaces.GPU
+    def dummy_zero_gpu():
+        return True
+except Exception:
+    pass
+
 def get_latest_go_version():
     try:
         req = urllib.request.Request(
@@ -21,6 +30,13 @@ def get_latest_go_version():
     return "1.25.0"
 
 def setup_and_run():
+    # Panggil fungsi dummy jika spaces aktif
+    try:
+        if "spaces" in sys.modules:
+            dummy_zero_gpu()
+    except Exception:
+        pass
+
     server_bin = "./server"
     
     # 1. Kompilasi binary Go jika belum ada
