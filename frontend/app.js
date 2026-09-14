@@ -158,19 +158,37 @@ function handleSelectedFile(file) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    state.currentImageBase64 = e.target.result;
-    previewImage.src = state.currentImageBase64;
-
-    // Detect dimensions
-    previewImage.onload = () => {
-      const w = previewImage.naturalWidth;
-      const h = previewImage.naturalHeight;
+    const rawData = e.target.result;
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      let w = tempImg.naturalWidth;
+      let h = tempImg.naturalHeight;
       fileDimDisplay.textContent = `${w} x ${h} px`;
-      btnStart.disabled = false;
-    };
 
-    dropEmpty.classList.add('hidden');
-    dropPreview.classList.remove('hidden');
+      // Scale to max 1080x1920 for fast network transfer
+      const maxW = 1080;
+      const maxH = 1920;
+      if (w > maxW || h > maxH) {
+        const ratio = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(tempImg, 0, 0, w, h);
+
+      // Store optimized JPEG (quality 0.95)
+      state.currentImageBase64 = canvas.toDataURL('image/jpeg', 0.95);
+      previewImage.src = state.currentImageBase64;
+      btnStart.disabled = false;
+
+      dropEmpty.classList.add('hidden');
+      dropPreview.classList.remove('hidden');
+    };
+    tempImg.src = rawData;
   };
   reader.readAsDataURL(file);
 }
@@ -303,8 +321,8 @@ function startProcess() {
   state.socket.onclose = (e) => {
     console.log('WebSocket closed:', e.code, e.reason);
     if (state.isProcessing) {
-      // If closed unexpectedly while processing
-      handleError('Koneksi terputus dari server.');
+      const detail = e.reason ? `: ${e.reason}` : (e.code ? ` (Kode: ${e.code})` : '');
+      handleError(`Koneksi terputus dari server${detail}.`);
     }
   };
 }

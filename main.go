@@ -121,10 +121,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		OriginPatterns: []string{"*"},
 	})
 	if err != nil {
-		log.Printf("WebSocket accept error: %v", err)
+		log.Printf("[WS] Accept error: %v", err)
 		return
 	}
 	defer c.Close(websocket.StatusInternalError, "session ended")
+
+	// Set read limit to 50MB (default is 32KB which drops large image uploads!)
+	c.SetReadLimit(50 * 1024 * 1024)
+	log.Printf("[WS] Client connected from %s", r.RemoteAddr)
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
@@ -132,9 +136,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Read initial configuration & image from client
 	var inMsg WSIncomingMessage
 	if err := wsjson.Read(ctx, c, &inMsg); err != nil {
-		log.Printf("Failed to read init message: %v", err)
+		log.Printf("[WS] Failed to read init message from %s: %v", r.RemoteAddr, err)
 		return
 	}
+
+	log.Printf("[WS] Init message received: action=%s, image_bytes=%d, pair_number=%s", 
+		inMsg.Action, len(inMsg.Image), inMsg.PairNumber)
 
 	if inMsg.Action != "start" || inMsg.Image == "" {
 		_ = wsjson.Write(ctx, c, WSOutgoingMessage{
