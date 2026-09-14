@@ -5,7 +5,7 @@ colorFrom: green
 colorTo: blue
 sdk: gradio
 app_file: app.py
-pinned: false
+pinned: true
 ---
 
 # WhatsApp Full Profile Picture (No-Crop HD) Web App
