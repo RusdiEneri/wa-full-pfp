@@ -29,6 +29,44 @@ def get_latest_go_version():
         print(f"[HF Space] Gagal mendeteksi versi Go otomatis: {e}", flush=True)
     return "1.25.0"
 
+import threading
+import time
+
+def start_keep_alive():
+    """Background daemon to ping the public URL periodically so the Space stays awake."""
+    def pinger():
+        # Tunggu 30 detik agar server Go selesai booting dan listening
+        time.sleep(30)
+        
+        space_host = os.environ.get("SPACE_HOST")
+        space_id = os.environ.get("SPACE_ID")
+        
+        if space_host:
+            target_url = f"https://{space_host}/health"
+        elif space_id:
+            slug = space_id.replace("/", "-").lower()
+            target_url = f"https://{slug}.hf.space/health"
+        else:
+            target_url = "https://ilhamdev-wa-full-pfp.hf.space/health"
+            
+        print(f"[HF Keep-Alive] Background pinger aktif. Target: {target_url}", flush=True)
+        
+        while True:
+            try:
+                # Interval ping setiap 15 menit (HF idle sleep threshold adalah 48 jam)
+                time.sleep(15 * 60)
+                req = urllib.request.Request(
+                    target_url,
+                    headers={"User-Agent": "HF-Space-SelfKeepAlive/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    print(f"[HF Keep-Alive] Self-ping sukses (Status: {resp.status})", flush=True)
+            except Exception as e:
+                print(f"[HF Keep-Alive] Ping notice: {e}", flush=True)
+                
+    t = threading.Thread(target=pinger, daemon=True)
+    t.start()
+
 def setup_and_run():
     # Panggil fungsi dummy jika spaces aktif
     try:
@@ -74,7 +112,10 @@ def setup_and_run():
         if os.path.exists(tar_path):
             os.remove(tar_path)
             
-    # 2. Jalankan server Go di port 7860
+    # 2. Aktifkan background keep-alive pinger
+    start_keep_alive()
+
+    # 3. Jalankan server Go di port 7860
     os.chmod(server_bin, 0o755)
     env = os.environ.copy()
     env["PORT"] = os.environ.get("PORT", "7860")
@@ -84,3 +125,4 @@ def setup_and_run():
 
 if __name__ == "__main__":
     setup_and_run()
+

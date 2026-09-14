@@ -1,0 +1,29 @@
+name: Keep Hugging Face Space Alive
+
+on:
+  schedule:
+    # Berjalan otomatis setiap 4 jam agar Space Hugging Face tidak pernah idle/sleep
+    - cron: '0 */4 * * *'
+  workflow_dispatch: # Mengizinkan trigger manual kapan saja dari tab Actions di GitHub
+
+jobs:
+  keep-alive:
+    name: Ping HF Space Health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Hugging Face Space
+        run: |
+          TARGET_URL="https://ilhamdev-wa-full-pfp.hf.space/health"
+          echo "=========================================="
+          echo "Sending keep-alive ping to: $TARGET_URL"
+          echo "Timestamp: $(date -u)"
+          echo "=========================================="
+          
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$TARGET_URL")
+          echo "Response HTTP Status Code: $STATUS"
+          
+          if [ "$STATUS" -eq 200 ]; then
+            echo "SUCCESS: Space aktif dan merespons dengan normal!"
+          else
+            echo "NOTICE: Status $STATUS diterima. Request ini telah memicu bangunnya container Space jika sebelumnya tertidur."
+          fi

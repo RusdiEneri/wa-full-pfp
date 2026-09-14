@@ -98,22 +98,49 @@ function getBackendWsUrl() {
   return `${protocol}//${window.location.host}/ws`;
 }
 
+let isWakingUp = false;
+
 async function checkBackendHealth() {
   const base = getBackendHttpUrl();
-  serverStatusBtn.className = 'status-pill status-checking';
-  serverStatusText.textContent = 'Memeriksa Backend...';
+  if (!isWakingUp) {
+    serverStatusBtn.className = 'status-pill status-checking';
+    serverStatusText.textContent = 'Memeriksa Backend...';
+  }
 
   try {
-    const res = await fetch(`${base}/health`, { method: 'GET', mode: 'cors' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    const res = await fetch(`${base}/health`, { 
+      method: 'GET', 
+      mode: 'cors',
+      signal: controller.signal 
+    });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
+      isWakingUp = false;
       serverStatusBtn.className = 'status-pill status-online';
       serverStatusText.textContent = 'Backend Online';
+    } else if (res.status === 502 || res.status === 503 || res.status === 504) {
+      isWakingUp = true;
+      serverStatusBtn.className = 'status-pill status-waking';
+      serverStatusText.textContent = 'Membangunkan Server (~30d)...';
+      setTimeout(checkBackendHealth, 5000);
     } else {
       throw new Error(`Status ${res.status}`);
     }
   } catch (err) {
-    serverStatusBtn.className = 'status-pill status-offline';
-    serverStatusText.textContent = 'Backend Offline';
+    if (err.name === 'AbortError' || isWakingUp) {
+      isWakingUp = true;
+      serverStatusBtn.className = 'status-pill status-waking';
+      serverStatusText.textContent = 'Membangunkan Server (~30d)...';
+      setTimeout(checkBackendHealth, 5000);
+    } else {
+      isWakingUp = false;
+      serverStatusBtn.className = 'status-pill status-offline';
+      serverStatusText.textContent = 'Backend Offline';
+    }
   }
 }
 

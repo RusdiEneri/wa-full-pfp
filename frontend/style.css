@@ -202,6 +202,23 @@ body {
   background-color: var(--accent-red);
 }
 
+.status-waking .status-dot {
+  background-color: #f97316;
+  box-shadow: 0 0 8px #f97316;
+  animation: dot-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes dot-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
 .icon-btn {
   background: transparent;
   border: 1px solid var(--border-color);
