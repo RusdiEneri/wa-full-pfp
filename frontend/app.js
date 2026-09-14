@@ -2,12 +2,31 @@
  * WhatsApp Full Profile Picture - Frontend Application
  */
 
+const DEFAULT_HF_BACKEND = 'https://ilhamdev-wa-full-pfp.hf.space';
+
+function getDefaultBackendUrl() {
+  const saved = localStorage.getItem('wa_pfp_backend_url');
+  if (saved && saved.trim() !== '') {
+    return saved.trim();
+  }
+  // Jika dibuka lokal di komputer (localhost/127.0.0.1)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return window.location.origin;
+  }
+  // Jika dibuka langsung di web space Hugging Face
+  if (window.location.hostname.includes('hf.space')) {
+    return window.location.origin;
+  }
+  // Default otomatis untuk Vercel:
+  return DEFAULT_HF_BACKEND;
+}
+
 // Application State
 const state = {
   currentImageBase64: null,
   connectionMethod: 'qr', // 'qr' or 'phone'
   socket: null,
-  backendUrl: localStorage.getItem('wa_pfp_backend_url') || '',
+  backendUrl: getDefaultBackendUrl(),
   isProcessing: false,
 };
 
@@ -64,7 +83,7 @@ function getBackendHttpUrl() {
   if (state.backendUrl && state.backendUrl.trim() !== '') {
     return state.backendUrl.trim().replace(/\/+$/, '');
   }
-  return window.location.origin;
+  return getDefaultBackendUrl();
 }
 
 function getBackendWsUrl() {
@@ -437,11 +456,12 @@ function initSettings() {
 
   btnSaveSettings.addEventListener('click', () => {
     const val = inputBackendUrl.value.trim();
-    state.backendUrl = val;
     if (val) {
+      state.backendUrl = val;
       localStorage.setItem('wa_pfp_backend_url', val);
     } else {
       localStorage.removeItem('wa_pfp_backend_url');
+      state.backendUrl = getDefaultBackendUrl();
     }
     closeModal();
     checkBackendHealth();
