@@ -1,0 +1,23 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+
+# Temporary SQLite files
+*.db
+*.db-wal
+*.db-shm
+wa_pfp_sessions/
+
+# Local environment
+.env
+
+# Local test image
+pfp.jpg
+
+# OS files
+Thumbs.db
+.DS_Store

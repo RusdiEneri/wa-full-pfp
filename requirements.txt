@@ -1,0 +1,2 @@
+# Minimal requirement for Hugging Face Gradio Space validation
+gradio
