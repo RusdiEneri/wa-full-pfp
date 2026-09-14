@@ -7,6 +7,7 @@ import tarfile
 
 # Mock @spaces.GPU untuk mencegah error jika Space tidak sengaja di-set ke ZeroGPU
 try:
+    # pyrefly: ignore [missing-import]
     import spaces
     @spaces.GPU
     def dummy_zero_gpu():

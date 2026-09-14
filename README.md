@@ -32,7 +32,7 @@ Aplikasi ini dirancang untuk dapat dijalankan secara terpisah:
 1. Buka [Hugging Face](https://huggingface.co/) & buat Space baru ([huggingface.co/new-space](https://huggingface.co/new-space)):
    - **Space name**: misalnya `wa-pfp-server`
    - **Select the Space SDK**: Pilih **Gradio** (Template: **Blank**) *(100% Gratis!)*
-   - **Space hardware**: Pilih **CPU basic (Free)**
+   - **Space hardware**: Pilih **ZeroGPU (Free)**
 2. Push repository ini ke Hugging Face Space Anda (via Git).
 3. Hugging Face akan menjalankan launcher [`app.py`](app.py) yang otomatis mengompilasi dan menjalankan server Go pada port 7860.
 4. Setelah statusnya **Running**, backend Anda aktif di:
