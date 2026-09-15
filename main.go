@@ -198,8 +198,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Device properties (mimic Edge on Windows for best WhatsApp compatibility)
-	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_EDGE.Enum()
-	store.DeviceProps.Os = proto.String("Windows")
+	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_CHROME.Enum()
+	store.DeviceProps.Os = proto.String("Chrome (Windows)")
 
 	deviceStore, err := container.GetFirstDevice(ctx)
 	if err != nil {
