@@ -197,9 +197,16 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[Session %s] Sesi selesai dan dibersihkan.", sessionID)
 	}()
 
-	// Device properties (mimic Edge on Windows for best WhatsApp compatibility)
+	// Device properties (mimic Google Chrome on Windows dengan versi terbaru)
 	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_CHROME.Enum()
-	store.DeviceProps.Os = proto.String("Chrome (Windows)")
+	store.DeviceProps.Os = proto.String("Google Chrome (Windows)")
+	
+	// PENTING: Set versi WhatsApp Web terbaru agar tidak ditolak server karena dianggap "kadaluarsa" (outdated)
+	store.DeviceProps.Version = &waCompanionReg.DeviceProps_AppVersion{
+		Primary:   2,
+		Secondary: 3000,
+		Tertiary:  1026, // Versi WhatsApp Web terkini (2.3000.1026)
+	}
 
 	deviceStore, err := container.GetFirstDevice(ctx)
 	if err != nil {
@@ -216,19 +223,21 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Mode 1: Pairing code (via phone number)
 	if inMsg.PairNumber != "" {
 		pairNumber := regexp.MustCompile(`\D+`).ReplaceAllString(inMsg.PairNumber, "")
+		
+		// Validasi panjang nomor untuk memastikan ada kode negara
+		if len(pairNumber) < 10 {
+			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+				Type:    "error",
+				Message: "Format nomor telepon tidak valid. Pastikan menggunakan kode negara (contoh: 62812... untuk Indonesia, jangan gunakan 0812...).",
+			})
+			return
+		}
+
 		_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 			Type:    "status",
 			Message: fmt.Sprintf("Menghubungkan kode pairing untuk nomor: %s...", pairNumber),
 		})
 
-		// PairPhone harus dipanggil setelah websocket benar-benar siap.
-		// Menurut whatsmeow, GetQRChannel() dipanggil sebelum Connect(), lalu
-		// item QR pertama ditunggu sebagai tanda koneksi sudah siap.
-		//
-		// PENTING: jangan cancel qrCtx setelah menerima QR pertama.
-		// QR channel masih merupakan bagian dari lifecycle websocket dan
-		// cancellation di titik ini dapat membuat PairPhone() melihat
-		// "websocket not connected".
 		qrCtx, qrCancel := context.WithCancel(ctx)
 		defer qrCancel()
 
@@ -249,8 +258,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Tunggu QR pertama. QR-nya tidak digunakan; event ini hanya
-		// dipakai sebagai indikator websocket login sudah established.
+		// Tunggu QR pertama sebagai indikator websocket login sudah established
 		select {
 		case evt, ok := <-qrChan:
 			if !ok {
@@ -273,9 +281,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Tetap drain QR channel sampai pairing selesai. Jangan cancel channel
-		// sebelum PairPhone selesai karena lifecycle QR channel masih menangani
-		// websocket login.
+		// Tetap drain QR channel sampai pairing selesai
 		go func() {
 			for evt := range qrChan {
 				log.Printf("[Session %s] Pairing QR event: %s", sessionID, evt.Event)
@@ -284,11 +290,16 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		// PairPhone dipanggil SEGERA setelah QR pertama diterima.
-		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientChrome, "Chrome (Windows)")
+		// Gunakan "Google Chrome (Windows)" yang merupakan format canonical yang diterima server WhatsApp
+		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientChrome, "Google Chrome (Windows)")
 		if err != nil {
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "400") || strings.Contains(errMsg, "bad-request") {
+				errMsg = "Permintaan ditolak oleh server WhatsApp (400). Ini biasanya terjadi jika: 1) Anda menjalankan ini di IP Cloud/Datacenter (seperti HuggingFace/Vercel) yang diblokir WhatsApp, 2) Nomor tidak terdaftar di WhatsApp, atau 3) IP Anda terdeteksi sebagai bot."
+			}
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
-				Message: fmt.Sprintf("Gagal meminta kode pairing: %v", err),
+				Message: fmt.Sprintf("Gagal meminta kode pairing: %v", errMsg),
 			})
 			return
 		}
