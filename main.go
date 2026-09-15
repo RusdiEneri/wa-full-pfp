@@ -201,11 +201,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_CHROME.Enum()
 	store.DeviceProps.Os = proto.String("Google Chrome (Windows)")
 	
-	// PENTING: Set versi WhatsApp Web terbaru agar tidak ditolak server karena dianggap "kadaluarsa" (outdated)
+	// PENTING: Set versi WhatsApp Web terbaru menggunakan proto.Uint32() agar menjadi pointer
 	store.DeviceProps.Version = &waCompanionReg.DeviceProps_AppVersion{
-		Primary:   2,
-		Secondary: 3000,
-		Tertiary:  1026, // Versi WhatsApp Web terkini (2.3000.1026)
+		Primary:   proto.Uint32(2),
+		Secondary: proto.Uint32(3000),
+		Tertiary:  proto.Uint32(1026), // Versi WhatsApp Web terkini (2.3000.1026)
 	}
 
 	deviceStore, err := container.GetFirstDevice(ctx)
