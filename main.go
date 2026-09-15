@@ -37,17 +37,17 @@ var embeddedFrontend embed.FS
 
 // WSIncomingMessage represents requests sent by the frontend
 type WSIncomingMessage struct {
-	Action      string `json:"action"`       // "start"
-	Image       string `json:"image"`        // Base64 data URL
-	PairNumber  string `json:"pair_number"`  // Optional phone number for pairing code
+	Action     string `json:"action"`      // "start"
+	Image      string `json:"image"`       // Base64 data URL
+	PairNumber string `json:"pair_number"` // Optional phone number for pairing code
 }
 
 // WSOutgoingMessage represents messages sent to the frontend
 type WSOutgoingMessage struct {
-	Type    string `json:"type"`              // "status", "qr", "pairing_code", "success", "error"
-	Message string `json:"message,omitempty"` // Status description
-	Code    string `json:"code,omitempty"`    // Raw QR or Pairing code
-	QRImage string `json:"qr_image,omitempty"`// Base64 PNG data URL of QR code
+	Type    string `json:"type"`               // "status", "qr", "pairing_code", "success", "error"
+	Message string `json:"message,omitempty"`  // Status description
+	Code    string `json:"code,omitempty"`     // Raw QR or Pairing code
+	QRImage string `json:"qr_image,omitempty"` // Base64 PNG data URL of QR code
 }
 
 func main() {
@@ -140,7 +140,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[WS] Init message received: action=%s, image_bytes=%d, pair_number=%s", 
+	log.Printf("[WS] Init message received: action=%s, image_bytes=%d, pair_number=%s",
 		inMsg.Action, len(inMsg.Image), inMsg.PairNumber)
 
 	if inMsg.Action != "start" || inMsg.Image == "" {
@@ -221,7 +221,22 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			Message: fmt.Sprintf("Menghubungkan kode pairing untuk nomor: %s...", pairNumber),
 		})
 
+		// PairPhone harus dipanggil setelah websocket benar-benar siap.
+		// whatsmeow menyarankan menunggu event QR pertama setelah Connect().
+		qrCtx, qrCancel := context.WithCancel(ctx)
+		defer qrCancel()
+
+		qrChan, err := client.GetQRChannel(qrCtx)
+		if err != nil {
+			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+				Type:    "error",
+				Message: fmt.Sprintf("Gagal menyiapkan channel pairing: %v", err),
+			})
+			return
+		}
+
 		if err := client.Connect(); err != nil {
+			qrCancel()
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
 				Message: fmt.Sprintf("Koneksi gagal: %v", err),
@@ -229,7 +244,32 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientType(*store.DeviceProps.PlatformType), *store.DeviceProps.Os)
+		select {
+		case evt, ok := <-qrChan:
+			if !ok {
+				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+					Type:    "error",
+					Message: "Channel WhatsApp ditutup sebelum koneksi siap.",
+				})
+				return
+			}
+			if evt.Event != "code" {
+				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+					Type:    "error",
+					Message: fmt.Sprintf("WhatsApp belum siap untuk pairing (event: %s).", evt.Event),
+				})
+				return
+			}
+			log.Printf("[Session %s] WhatsApp websocket siap untuk PairPhone", sessionID)
+		case <-ctx.Done():
+			return
+		}
+
+		// QR hanya dipakai sebagai sinyal bahwa handshake websocket sudah selesai.
+		// Hentikan emitter QR sebelum meminta pairing code agar tidak meninggalkan goroutine.
+		qrCancel()
+
+		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientEdge, "Edge (Windows)")
 		if err != nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
