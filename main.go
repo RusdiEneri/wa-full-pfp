@@ -238,18 +238,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			Message: fmt.Sprintf("Menghubungkan kode pairing untuk nomor: %s...", pairNumber),
 		})
 
-		qrCtx, qrCancel := context.WithCancel(ctx)
-		defer qrCancel()
-
-		qrChan, err := client.GetQRChannel(qrCtx)
-		if err != nil {
-			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
-				Type:    "error",
-				Message: fmt.Sprintf("Gagal menyiapkan channel pairing: %v", err),
-			})
-			return
-		}
-
 		if err := client.Connect(); err != nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
@@ -258,40 +246,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Tunggu QR pertama sebagai indikator websocket login sudah established
-		select {
-		case evt, ok := <-qrChan:
-			if !ok {
-				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
-					Type:    "error",
-					Message: "Channel WhatsApp ditutup sebelum koneksi siap.",
-				})
-				return
-			}
-			if evt.Event != "code" {
-				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
-					Type:    "error",
-					Message: fmt.Sprintf("WhatsApp belum siap untuk pairing (event: %s).", evt.Event),
-				})
-				return
-			}
-			log.Printf("[Session %s] WhatsApp websocket siap untuk PairPhone (IsConnected=%v)",
-				sessionID, client.IsConnected())
-		case <-ctx.Done():
-			return
-		}
-
-		// Tetap drain QR channel sampai pairing selesai
-		go func() {
-			for evt := range qrChan {
-				log.Printf("[Session %s] Pairing QR event: %s", sessionID, evt.Event)
-			}
-			log.Printf("[Session %s] QR channel ditutup", sessionID)
-		}()
-
-		// PairPhone dipanggil SEGERA setelah QR pertama diterima.
-		// Gunakan "Google Chrome (Windows)" yang merupakan format canonical yang diterima server WhatsApp
-		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientChrome, "Google Chrome (Windows)")
+		// PERBAIKAN: Panggil PairPhone LANGSUNG setelah Connect() tanpa menunggu channel QR.
+		// Gunakan context.Background() dengan timeout khusus agar tidak terputus jika websocket client glitch.
+		pairCtx, pairCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		code, err := client.PairPhone(pairCtx, pairNumber, true, whatsmeow.PairClientChrome, *store.DeviceProps.Os)
+		pairCancel()
+		
 		if err != nil {
 			errMsg := err.Error()
 			if strings.Contains(errMsg, "400") || strings.Contains(errMsg, "bad-request") {
