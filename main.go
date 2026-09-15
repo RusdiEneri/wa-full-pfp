@@ -222,7 +222,13 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		})
 
 		// PairPhone harus dipanggil setelah websocket benar-benar siap.
-		// whatsmeow menyarankan menunggu event QR pertama setelah Connect().
+		// Menurut whatsmeow, GetQRChannel() dipanggil sebelum Connect(), lalu
+		// item QR pertama ditunggu sebagai tanda koneksi sudah siap.
+		//
+		// PENTING: jangan cancel qrCtx setelah menerima QR pertama.
+		// QR channel masih merupakan bagian dari lifecycle websocket dan
+		// cancellation di titik ini dapat membuat PairPhone() melihat
+		// "websocket not connected".
 		qrCtx, qrCancel := context.WithCancel(ctx)
 		defer qrCancel()
 
@@ -236,7 +242,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := client.Connect(); err != nil {
-			qrCancel()
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
 				Message: fmt.Sprintf("Koneksi gagal: %v", err),
@@ -244,6 +249,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Tunggu QR pertama. QR-nya tidak digunakan; event ini hanya
+		// dipakai sebagai indikator websocket login sudah established.
 		select {
 		case evt, ok := <-qrChan:
 			if !ok {
@@ -260,15 +267,23 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				})
 				return
 			}
-			log.Printf("[Session %s] WhatsApp websocket siap untuk PairPhone", sessionID)
+			log.Printf("[Session %s] WhatsApp websocket siap untuk PairPhone (IsConnected=%v)",
+				sessionID, client.IsConnected())
 		case <-ctx.Done():
 			return
 		}
 
-		// QR hanya dipakai sebagai sinyal bahwa handshake websocket sudah selesai.
-		// Hentikan emitter QR sebelum meminta pairing code agar tidak meninggalkan goroutine.
-		qrCancel()
+		// Tetap drain QR channel sampai pairing selesai. Jangan cancel channel
+		// sebelum PairPhone selesai karena lifecycle QR channel masih menangani
+		// websocket login.
+		go func() {
+			for evt := range qrChan {
+				log.Printf("[Session %s] Pairing QR event: %s", sessionID, evt.Event)
+			}
+			log.Printf("[Session %s] QR channel ditutup", sessionID)
+		}()
 
+		// PairPhone dipanggil SEGERA setelah QR pertama diterima.
 		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientEdge, "Edge (Windows)")
 		if err != nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
