@@ -284,7 +284,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		// PairPhone dipanggil SEGERA setelah QR pertama diterima.
-		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientEdge, "Edge (Windows)")
+		code, err := client.PairPhone(ctx, pairNumber, true, whatsmeow.PairClientChrome, "Chrome (Windows)")
 		if err != nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
