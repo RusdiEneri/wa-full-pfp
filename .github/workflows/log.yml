@@ -1,0 +1,42 @@
+name: Update Activity Log
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/log.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update log.txt
+        run: |
+          TIME=$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M:%S WIB')
+          echo "Last updated: $TIME" > log.txt
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "RusdiEneri"
+          git config --global user.email "nuruddinrusydiilham@gmail.com"
+
+          git add log.txt
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: update activity log"
+          git push
