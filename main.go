@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,9 +38,10 @@ var embeddedFrontend embed.FS
 
 // WSIncomingMessage represents requests sent by the frontend
 type WSIncomingMessage struct {
-	Action     string `json:"action"`      // "start"
-	Image      string `json:"image"`       // Base64 data URL
-	PairNumber string `json:"pair_number"` // Optional phone number for pairing code
+	Action         string `json:"action"`                    // "start"
+	Image          string `json:"image"`                     // Base64 data URL
+	PairNumber     string `json:"pair_number"`               // Optional phone number for pairing code
+	TurnstileToken string `json:"turnstile_token,omitempty"` // Cloudflare Turnstile token
 }
 
 // WSOutgoingMessage represents messages sent to the frontend
@@ -48,6 +50,70 @@ type WSOutgoingMessage struct {
 	Message string `json:"message,omitempty"`  // Status description
 	Code    string `json:"code,omitempty"`     // Raw QR or Pairing code
 	QRImage string `json:"qr_image,omitempty"` // Base64 PNG data URL of QR code
+}
+
+// TurnstileVerifyResponse represents the response from Cloudflare Siteverify API
+type TurnstileVerifyResponse struct {
+	Success     bool      `json:"success"`
+	ChallengeTS time.Time `json:"challenge_ts"`
+	Hostname    string    `json:"hostname"`
+	ErrorCodes  []string  `json:"error-codes"`
+	Action      string    `json:"action"`
+	Cdata       string    `json:"cdata"`
+}
+
+// verifyTurnstileToken verifies a Cloudflare Turnstile token
+func verifyTurnstileToken(secretKey, token, remoteIP string) (bool, error) {
+	if secretKey == "" {
+		log.Println("[Turnstile] Secret key tidak dikonfigurasi. Mode bypass aktif untuk dev.")
+		return true, nil
+	}
+
+	if strings.TrimSpace(token) == "" {
+		return false, fmt.Errorf("token turnstile tidak boleh kosong")
+	}
+
+	data := url.Values{}
+	data.Set("secret", secretKey)
+	data.Set("response", token)
+	if remoteIP != "" {
+		data.Set("remoteip", remoteIP)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", data)
+	if err != nil {
+		return false, fmt.Errorf("gagal menghubungi api turnstile: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result TurnstileVerifyResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, fmt.Errorf("gagal decode response turnstile: %w", err)
+	}
+
+	if !result.Success {
+		return false, fmt.Errorf("verifikasi turnstile ditolak: %v", result.ErrorCodes)
+	}
+
+	return true, nil
+}
+
+// registerConfigEndpoint exposes public configuration (e.g. Turnstile site key) to the frontend
+func registerConfigEndpoint(mux *http.ServeMux) {
+	mux.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
+		enableCORS(w)
+		w.Header().Set("Content-Type", "application/json")
+
+		siteKey := os.Getenv("TURNSTILE_SITE_KEY")
+		secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
+		isEnabled := siteKey != "" && secretKey != ""
+
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"turnstile_enabled":  isEnabled,
+			"turnstile_site_key": siteKey,
+		})
+	})
 }
 
 func main() {
@@ -70,6 +136,9 @@ func main() {
 			"time":    time.Now().Format(time.RFC3339),
 		})
 	})
+
+	// Public config endpoint
+	registerConfigEndpoint(mux)
 
 	// WebSocket handler for WhatsApp session
 	mux.HandleFunc("/ws", handleWebSocket)
