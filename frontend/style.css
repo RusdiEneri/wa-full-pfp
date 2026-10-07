@@ -595,6 +595,53 @@ body {
 }
 
 /* ==========================================================================
+   Cloudflare Turnstile Widget
+   ========================================================================== */
+.turnstile-wrapper {
+  margin: 18px 0 14px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: var(--transition-normal);
+}
+
+.turnstile-wrapper:hover {
+  border-color: rgba(37, 211, 102, 0.3);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
+}
+
+.turnstile-widget {
+  min-height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.turnstile-feedback {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.turnstile-feedback.error {
+  color: #f87171;
+}
+
+.turnstile-feedback.success {
+  color: var(--accent-wa-green);
+}
+
+/* ==========================================================================
    Buttons
    ========================================================================== */
 .action-row {

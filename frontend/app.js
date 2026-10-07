@@ -28,6 +28,10 @@ const state = {
   socket: null,
   backendUrl: getDefaultBackendUrl(),
   isProcessing: false,
+  turnstileEnabled: false,
+  turnstileSiteKey: null,
+  turnstileToken: null,
+  turnstileWidgetId: null,
 };
 
 // DOM Elements
@@ -40,6 +44,10 @@ const fileNameDisplay = document.getElementById('file-name-display');
 const fileDimDisplay = document.getElementById('file-dim-display');
 const btnChangeImage = document.getElementById('btn-change-image');
 const btnStart = document.getElementById('btn-start-process');
+
+const turnstileWrapper = document.getElementById('turnstile-wrapper');
+const turnstileWidget = document.getElementById('turnstile-widget');
+const turnstileFeedback = document.getElementById('turnstile-feedback');
 
 const tabQr = document.getElementById('tab-qr');
 const tabPhone = document.getElementById('tab-phone');
@@ -100,6 +108,114 @@ function getBackendWsUrl() {
 
 let isWakingUp = false;
 
+function updateStartButtonState() {
+  if (!state.currentImageBase64) {
+    btnStart.disabled = true;
+    return;
+  }
+  if (state.turnstileEnabled && !state.turnstileToken) {
+    btnStart.disabled = true;
+    return;
+  }
+  btnStart.disabled = false;
+}
+
+function resetTurnstile() {
+  state.turnstileToken = null;
+  if (window.turnstile && state.turnstileWidgetId !== null) {
+    try {
+      window.turnstile.reset(state.turnstileWidgetId);
+    } catch (e) {
+      console.warn('[Turnstile] Gagal reset widget:', e);
+    }
+  }
+  if (turnstileFeedback) {
+    turnstileFeedback.textContent = '';
+    turnstileFeedback.className = 'turnstile-feedback';
+  }
+  updateStartButtonState();
+}
+
+function renderTurnstileWidget() {
+  if (!state.turnstileEnabled || !state.turnstileSiteKey) {
+    if (turnstileWrapper) turnstileWrapper.classList.add('hidden');
+    updateStartButtonState();
+    return;
+  }
+
+  if (turnstileWrapper) turnstileWrapper.classList.remove('hidden');
+
+  if (window.turnstile) {
+    if (state.turnstileWidgetId !== null) {
+      return; // Sudah dirender
+    }
+    try {
+      state.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+        sitekey: state.turnstileSiteKey,
+        theme: 'dark',
+        callback: (token) => {
+          state.turnstileToken = token;
+          if (turnstileFeedback) {
+            turnstileFeedback.textContent = 'Verifikasi keamanan berhasil.';
+            turnstileFeedback.className = 'turnstile-feedback success';
+          }
+          updateStartButtonState();
+        },
+        'expired-callback': () => {
+          state.turnstileToken = null;
+          if (turnstileFeedback) {
+            turnstileFeedback.textContent = 'Verifikasi kedaluwarsa. Silakan verifikasi ulang.';
+            turnstileFeedback.className = 'turnstile-feedback error';
+          }
+          updateStartButtonState();
+          if (window.turnstile && state.turnstileWidgetId !== null) {
+            window.turnstile.reset(state.turnstileWidgetId);
+          }
+        },
+        'error-callback': () => {
+          state.turnstileToken = null;
+          if (turnstileFeedback) {
+            turnstileFeedback.textContent = 'Gagal memuat tantangan Cloudflare Turnstile.';
+            turnstileFeedback.className = 'turnstile-feedback error';
+          }
+          updateStartButtonState();
+        },
+      });
+    } catch (err) {
+      console.error('[Turnstile] Gagal inisialisasi render widget:', err);
+    }
+  } else {
+    // Skrip Turnstile mungkin masih loading dari CDN Cloudflare
+    setTimeout(renderTurnstileWidget, 300);
+  }
+}
+
+async function fetchBackendConfig() {
+  try {
+    const base = getBackendHttpUrl();
+    const res = await fetch(`${base}/config`, { 
+      method: 'GET',
+      mode: 'cors' 
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.turnstile_enabled && data.turnstile_site_key) {
+        state.turnstileEnabled = true;
+        state.turnstileSiteKey = data.turnstile_site_key;
+        renderTurnstileWidget();
+      } else {
+        state.turnstileEnabled = false;
+        state.turnstileSiteKey = null;
+        state.turnstileToken = null;
+        if (turnstileWrapper) turnstileWrapper.classList.add('hidden');
+        updateStartButtonState();
+      }
+    }
+  } catch (err) {
+    console.warn('[Config] Gagal mengambil konfigurasi backend:', err);
+  }
+}
+
 async function checkBackendHealth() {
   const base = getBackendHttpUrl();
   if (!isWakingUp) {
@@ -122,6 +238,8 @@ async function checkBackendHealth() {
       isWakingUp = false;
       serverStatusBtn.className = 'status-pill status-online';
       serverStatusText.textContent = 'Backend Online';
+      // Ambil konfigurasi publik dari backend saat online
+      fetchBackendConfig();
     } else if (res.status === 502 || res.status === 503 || res.status === 504) {
       isWakingUp = true;
       serverStatusBtn.className = 'status-pill status-waking';
@@ -229,7 +347,7 @@ function handleSelectedFile(file) {
       // Store optimized JPEG (quality 0.95)
       state.currentImageBase64 = canvas.toDataURL('image/jpeg', 0.95);
       previewImage.src = state.currentImageBase64;
-      btnStart.disabled = false;
+      updateStartButtonState();
 
       dropEmpty.classList.add('hidden');
       dropPreview.classList.remove('hidden');
@@ -302,6 +420,11 @@ function startProcess() {
     return;
   }
 
+  if (state.turnstileEnabled && !state.turnstileToken) {
+    alert('Silakan selesaikan verifikasi keamanan terlebih dahulu.');
+    return;
+  }
+
   let pairNumber = '';
   if (state.connectionMethod === 'phone') {
     pairNumber = inputPhoneNumber.value.trim().replace(/\D+/g, '');
@@ -346,6 +469,7 @@ function startProcess() {
       action: 'start',
       image: state.currentImageBase64,
       pair_number: pairNumber,
+      turnstile_token: state.turnstileToken || '',
     };
     state.socket.send(JSON.stringify(payload));
   };
@@ -403,6 +527,11 @@ function handleServerMessage(msg) {
 
     case 'success':
       state.isProcessing = false;
+      if (state.socket) {
+        state.socket.close();
+        state.socket = null;
+      }
+      resetTurnstile();
       setStep(3);
       break;
 
@@ -427,6 +556,7 @@ function handleError(errorMessage) {
     state.socket.close();
     state.socket = null;
   }
+  resetTurnstile();
   alert(errorMessage);
   setStep(1);
 }
@@ -438,6 +568,7 @@ function cancelSession() {
       state.socket.close();
       state.socket = null;
     }
+    resetTurnstile();
     setStep(1);
   }
 }
@@ -452,7 +583,7 @@ function restartApp() {
   state.currentImageBase64 = null;
   dropEmpty.classList.remove('hidden');
   dropPreview.classList.add('hidden');
-  btnStart.disabled = true;
+  resetTurnstile();
   setStep(1);
 }
 
@@ -491,6 +622,9 @@ function initSettings() {
       state.backendUrl = getDefaultBackendUrl();
     }
     closeModal();
+    state.turnstileWidgetId = null;
+    if (turnstileWidget) turnstileWidget.innerHTML = '';
+    resetTurnstile();
     checkBackendHealth();
   });
 }

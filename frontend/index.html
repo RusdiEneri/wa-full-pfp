@@ -12,6 +12,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
+  
+  <!-- Cloudflare Turnstile Explicit Render API -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
   <!-- Ambient background glow elements -->
@@ -145,6 +148,12 @@
             </div>
             <p class="input-help">Contoh: 628123456789 (tanpa tanda strip atau spasi)</p>
           </div>
+        </div>
+
+        <!-- Cloudflare Turnstile Anti-Bot Security Widget -->
+        <div id="turnstile-wrapper" class="turnstile-wrapper hidden">
+          <div id="turnstile-widget" class="turnstile-widget"></div>
+          <p id="turnstile-feedback" class="turnstile-feedback"></p>
         </div>
 
         <!-- Start Action Button -->
