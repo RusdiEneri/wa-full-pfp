@@ -220,6 +220,29 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validasi keamanan Cloudflare Turnstile jika diaktifkan di server
+	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
+	if secretKey != "" {
+		clientIP := r.Header.Get("CF-Connecting-IP")
+		if clientIP == "" {
+			clientIP = r.Header.Get("X-Forwarded-For")
+		}
+		if clientIP == "" {
+			clientIP = strings.Split(r.RemoteAddr, ":")[0]
+		}
+
+		ok, err := verifyTurnstileToken(secretKey, inMsg.TurnstileToken, clientIP)
+		if !ok || err != nil {
+			log.Printf("[WS] Turnstile verification failed for %s: %v", r.RemoteAddr, err)
+			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+				Type:    "error",
+				Message: "Verifikasi keamanan Turnstile gagal atau kedaluwarsa. Silakan muat ulang halaman dan coba lagi.",
+			})
+			return
+		}
+		log.Printf("[WS] Turnstile verification succeeded for %s", r.RemoteAddr)
+	}
+
 	_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 		Type:    "status",
 		Message: "Memproses gambar profil...",
