@@ -77,11 +77,35 @@ Anda juga bisa menjalankan seluruh web app (Backend + Frontend) secara langsung 
 
 ---
 
+## 🛡️ Cloudflare Turnstile (Perlindungan Anti-Bot)
+
+Aplikasi ini dilengkapi dengan **Cloudflare Turnstile** untuk mencegah serangan bot, spam pembuatan sesi WhatsApp, dan menjaga server Hugging Face Spaces tetap stabil.
+
+### Cara Mengaktifkan Cloudflare Turnstile:
+1. Buka [Cloudflare Dashboard](https://dash.cloudflare.com/) > menu **Turnstile**.
+2. Klik **Add site**:
+   - **Site name**: `WA Full Profile Picture`
+   - **Domain**: Masukkan domain frontend Vercel Anda (misal `wa-pfp.vercel.app`) dan domain lokal `localhost`.
+   - **Widget Mode**: Pilih **Managed** (Sangat direkomendasikan - verifikasi pintar tanpa tebak-gambar rumit).
+3. Salin **Site Key** dan **Secret Key**.
+4. Di Hugging Face Space Anda:
+   - Buka menu **Settings** > **Variables and secrets**.
+   - Tambahkan **Secret**:
+     - `TURNSTILE_SECRET_KEY` = *(Secret Key Anda)*
+   - Tambahkan **Variable**:
+     - `TURNSTILE_SITE_KEY` = *(Site Key Anda)*
+5. **Selesai!** Frontend di Vercel secara otomatis mendeteksi konfigurasi tersebut via endpoint `/config` dari Hugging Face dan langsung merender widget Turnstile di atas tombol proses tanpa perlu redeploy Vercel.
+
+> 💡 **Mode Dev / Pengujian Lokal:** Jika `TURNSTILE_SECRET_KEY` dikosongkan (misal saat dijalankan di komputer lokal), backend secara otomatis masuk ke **Dev/Bypass Mode** sehingga Anda tetap bisa melakukan pengujian tanpa harus menyiapkan akun Cloudflare terlebih dahulu.
+
+---
+
 ## 🔒 Privasi & Keamanan
 
 1. **Tidak Ada Database Permanen**: Menggunakan SQLite sementara (`file:sess_<uuid>.db`) yang dihapus secara permanen seketika proses selesai.
 2. **Auto-Logout Seketika**: Kode secara eksplisit memanggil `client.Logout()` ke server WhatsApp setelah foto berhasil diunggah, memastikan sesi tertaut di HP Anda langsung terputus.
-3. **Tanpa Akses Chat**: Aplikasi ini hanya memanggil API `SetGroupPhoto` (untuk foto profil) dan tidak membaca kontak maupun riwayat obrolan Anda.
+3. **Perlindungan Anti-Bot**: Dilindungi Cloudflare Turnstile dengan validasi token *single-use* sebelum sesi WhatsApp whatsmeow dialokasikan.
+4. **Tanpa Akses Chat**: Aplikasi ini hanya memanggil API `SetGroupPhoto` (untuk foto profil) dan tidak membaca kontak maupun riwayat obrolan Anda.
 
 ---
 
