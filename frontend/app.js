@@ -9,6 +9,10 @@ function getDefaultBackendUrl() {
   if (saved && saved.trim() !== '') {
     return saved.trim();
   }
+  // Jika dibuka di domain kustom / subdomain mangrusdi.my.id
+  if (window.location.hostname.includes('mangrusdi.my.id')) {
+    return window.location.origin;
+  }
   // Jika dibuka lokal di komputer (localhost/127.0.0.1)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return window.location.origin;
@@ -17,8 +21,11 @@ function getDefaultBackendUrl() {
   if (window.location.hostname.includes('hf.space')) {
     return window.location.origin;
   }
-  // Default otomatis untuk Vercel:
-  return DEFAULT_HF_BACKEND;
+  // Default jika di Vercel:
+  if (window.location.hostname.includes('vercel.app')) {
+    return DEFAULT_HF_BACKEND;
+  }
+  return window.location.origin || DEFAULT_HF_BACKEND;
 }
 
 // Application State
@@ -40,10 +47,14 @@ const fileInput = document.getElementById('file-input');
 const dropEmpty = document.getElementById('drop-empty');
 const dropPreview = document.getElementById('drop-preview');
 const previewImage = document.getElementById('preview-image');
+const previewAvatarCircleImg = document.getElementById('preview-avatar-circle-img');
 const fileNameDisplay = document.getElementById('file-name-display');
 const fileDimDisplay = document.getElementById('file-dim-display');
 const btnChangeImage = document.getElementById('btn-change-image');
 const btnStart = document.getElementById('btn-start-process');
+
+const btnCopyPairing = document.getElementById('btn-copy-pairing');
+const copyBtnText = document.getElementById('copy-btn-text');
 
 const turnstileWrapper = document.getElementById('turnstile-wrapper');
 const turnstileWidget = document.getElementById('turnstile-widget');
@@ -273,6 +284,14 @@ function initDropZone() {
     }
   });
 
+  // Keyboard accessibility (Enter / Space)
+  dropZone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
   btnChangeImage.addEventListener('click', (e) => {
     e.stopPropagation();
     fileInput.click();
@@ -347,6 +366,9 @@ function handleSelectedFile(file) {
       // Store optimized JPEG (quality 0.95)
       state.currentImageBase64 = canvas.toDataURL('image/jpeg', 0.95);
       previewImage.src = state.currentImageBase64;
+      if (previewAvatarCircleImg) {
+        previewAvatarCircleImg.src = state.currentImageBase64;
+      }
       updateStartButtonState();
 
       dropEmpty.classList.add('hidden');
@@ -375,6 +397,17 @@ function initTabs() {
     phoneInputGroup.classList.remove('hidden');
     inputPhoneNumber.focus();
   });
+
+  // Realtime phone input sanitizer
+  if (inputPhoneNumber) {
+    inputPhoneNumber.addEventListener('input', () => {
+      let val = inputPhoneNumber.value.replace(/\D/g, '');
+      if (val.startsWith('0')) {
+        val = '62' + val.slice(1);
+      }
+      inputPhoneNumber.value = val;
+    });
+  }
 }
 
 /* ==========================================================================
@@ -612,6 +645,13 @@ function initSettings() {
     }
   });
 
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+
   btnSaveSettings.addEventListener('click', () => {
     const val = inputBackendUrl.value.trim();
     if (val) {
@@ -629,6 +669,23 @@ function initSettings() {
   });
 }
 
+function initCopyButton() {
+  if (!btnCopyPairing) return;
+  btnCopyPairing.addEventListener('click', async () => {
+    const raw = pairingCodeText.textContent.replace(/[^A-Za-z0-9]/g, '');
+    if (!raw || raw === '------') return;
+    try {
+      await navigator.clipboard.writeText(raw);
+      if (copyBtnText) copyBtnText.textContent = 'Tersalin!';
+      setTimeout(() => {
+        if (copyBtnText) copyBtnText.textContent = 'Salin';
+      }, 2000);
+    } catch (err) {
+      console.warn('Gagal menyalin kode:', err);
+    }
+  });
+}
+
 /* ==========================================================================
    Initialization
    ========================================================================== */
@@ -636,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDropZone();
   initTabs();
   initSettings();
+  initCopyButton();
 
   btnStart.addEventListener('click', startProcess);
   btnCancelSession.addEventListener('click', cancelSession);

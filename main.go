@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -289,15 +290,16 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[Session %s] Sesi selesai dan dibersihkan.", sessionID)
 	}()
 
-	// Device properties (mimic Google Chrome on Windows dengan versi terbaru)
+	// Device properties (mimic Chrome on Windows sesuai spesifikasi dan docs whatsmeow)
 	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_CHROME.Enum()
-	store.DeviceProps.Os = proto.String("Google Chrome (Windows)")
-	
-	// PENTING: Set versi WhatsApp Web terbaru menggunakan proto.Uint32() agar menjadi pointer
+	store.DeviceProps.Os = proto.String("Windows")
+
+	// PENTING: Gunakan versi WhatsApp Web terkini langsung dari store whatsmeow
+	waVer := store.GetWAVersion()
 	store.DeviceProps.Version = &waCompanionReg.DeviceProps_AppVersion{
-		Primary:   proto.Uint32(2),
-		Secondary: proto.Uint32(3000),
-		Tertiary:  proto.Uint32(1026), // Versi WhatsApp Web terkini (2.3000.1026)
+		Primary:   proto.Uint32(waVer[0]),
+		Secondary: proto.Uint32(waVer[1]),
+		Tertiary:  proto.Uint32(waVer[2]),
 	}
 
 	deviceStore, err := container.GetFirstDevice(ctx)
@@ -315,7 +317,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Mode 1: Pairing code (via phone number)
 	if inMsg.PairNumber != "" {
 		pairNumber := regexp.MustCompile(`\D+`).ReplaceAllString(inMsg.PairNumber, "")
-		
+
 		// Validasi panjang nomor untuk memastikan ada kode negara
 		if len(pairNumber) < 10 {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
@@ -330,6 +332,19 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			Message: fmt.Sprintf("Menghubungkan kode pairing untuk nomor: %s...", pairNumber),
 		})
 
+		// Sesuai dokumentasi resmi whatsmeow (tulir):
+		// GetQRChannel() harus dipanggil SEBELUM Connect().
+		// Kita perlu menunggu item pertama dari channel untuk memastikan koneksi ke server WhatsApp
+		// sudah siap penuh sebelum memanggil PairPhone.
+		qrChan, err := client.GetQRChannel(ctx)
+		if err != nil {
+			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+				Type:    "error",
+				Message: fmt.Sprintf("Gagal inisialisasi pairing channel: %v", err),
+			})
+			return
+		}
+
 		if err := client.Connect(); err != nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
@@ -338,16 +353,44 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// PERBAIKAN: Panggil PairPhone LANGSUNG setelah Connect() tanpa menunggu channel QR.
-		// Gunakan context.Background() dengan timeout khusus agar tidak terputus jika websocket client glitch.
+		// Tunggu item pertama dari qrChan agar koneksi siap penuh
+		select {
+		case item, ok := <-qrChan:
+			if !ok {
+				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+					Type:    "error",
+					Message: "Koneksi pairing terputus sebelum siap.",
+				})
+				return
+			}
+			if item.Event == "error" || item.Event == "err-client-outdated" {
+				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+					Type:    "error",
+					Message: fmt.Sprintf("Server WhatsApp menolak koneksi (%s): %v", item.Event, item.Error),
+				})
+				return
+			}
+		case <-time.After(3 * time.Second):
+			// Fallback timeout jika event QR tertunda
+		case <-ctx.Done():
+			return
+		}
+
+		// Menurut docs resmi whatsmeow:
+		// Format clientDisplayName HARUS `Browser (OS)`, contoh: "Chrome (Windows)".
+		// WhatsApp server memvalidasi string ini dan akan me-reject dengan error 400 jika tidak sesuai format.
 		pairCtx, pairCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		code, err := client.PairPhone(pairCtx, pairNumber, true, whatsmeow.PairClientChrome, *store.DeviceProps.Os)
+		code, err := client.PairPhone(pairCtx, pairNumber, true, whatsmeow.PairClientChrome, "Chrome (Windows)")
 		pairCancel()
-		
+
 		if err != nil {
 			errMsg := err.Error()
-			if strings.Contains(errMsg, "400") || strings.Contains(errMsg, "bad-request") {
-				errMsg = "Permintaan ditolak oleh server WhatsApp (400). Ini biasanya terjadi jika: 1) Anda menjalankan ini di IP Cloud/Datacenter (seperti HuggingFace/Vercel) yang diblokir WhatsApp, 2) Nomor tidak terdaftar di WhatsApp, atau 3) IP Anda terdeteksi sebagai bot."
+			if errors.Is(err, whatsmeow.ErrPhoneNumberIsNotInternational) {
+				errMsg = "Nomor telepon harus menyertakan kode negara internasional (contoh: 62812..., bukan 0812...)."
+			} else if errors.Is(err, whatsmeow.ErrPhoneNumberTooShort) {
+				errMsg = "Nomor telepon terlalu pendek."
+			} else if strings.Contains(errMsg, "400") || strings.Contains(errMsg, "bad-request") {
+				errMsg = fmt.Sprintf("Permintaan ditolak oleh server WhatsApp (400 Bad Request). Kemungkinan: 1) Nomor tidak terdaftar di WhatsApp, 2) IP server diblokir WhatsApp (Cloud/Datacenter), atau 3) Terlalu banyak percobaan pairing. Detail: %v", err)
 			}
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
@@ -362,9 +405,13 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			Message: "Masukkan kode ini pada WhatsApp di HP Anda (Perangkat Tertaut -> Tautkan dengan nomor telepon)",
 		})
 
-		// Wait for login or timeout (2 minutes)
+		// Wait for login or timeout (160 seconds sesuai masa aktif websocket pairing WhatsApp)
 		loginSuccess := false
-		for i := 0; i < 120; i++ {
+		loginTimer := time.NewTimer(160 * time.Second)
+		defer loginTimer.Stop()
+
+	loginLoop:
+		for !loginSuccess {
 			if client.Store.ID != nil {
 				loginSuccess = true
 				break
@@ -372,7 +419,35 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ctx.Done():
 				return
+			case <-loginTimer.C:
+				_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+					Type:    "error",
+					Message: "Waktu pairing habis (timeout). Silakan coba lagi.",
+				})
+				return
+			case item, ok := <-qrChan:
+				if !ok {
+					if client.Store.ID != nil {
+						loginSuccess = true
+					}
+					break loginLoop
+				}
+				if item.Event == "success" || client.Store.ID != nil {
+					loginSuccess = true
+					break loginLoop
+				} else if item.Event == "error" {
+					_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+						Type:    "error",
+						Message: fmt.Sprintf("Pairing gagal: %v", item.Error),
+					})
+					return
+				}
+				// Event "code" dapat diabaikan saat pairing dengan nomor HP
 			case <-time.After(1 * time.Second):
+				if client.Store.ID != nil {
+					loginSuccess = true
+					break loginLoop
+				}
 			}
 		}
 

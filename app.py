@@ -28,7 +28,7 @@ def get_latest_go_version():
                 return ver.lstrip("go")
     except Exception as e:
         print(f"[HF Space] Gagal mendeteksi versi Go otomatis: {e}", flush=True)
-    return "1.25.0"
+    return "1.26.0"
 
 import threading
 import time

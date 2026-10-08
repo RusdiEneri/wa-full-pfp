@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /ws
+
+Sitemap: https://ppfull.mangrusdi.my.id/sitemap.xml

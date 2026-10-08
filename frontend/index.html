@@ -3,275 +3,379 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsApp Full Profile Picture - No-Crop HD</title>
-  <meta name="description" content="Ubah foto profil WhatsApp menjadi ukuran penuh (No Crop) dan resolusi tinggi tanpa kompresi secara instan, aman, dan langsung auto-logout.">
+  <title>WhatsApp Full Profile Picture - Pasang Foto Profil No Crop HD</title>
   
-  <!-- Google Fonts: Outfit & Inter -->
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="WhatsApp Full Profile Picture - Pasang Foto Profil No Crop HD">
+  <meta name="description" content="Pasang foto profil WhatsApp ukuran penuh tanpa terpotong (No Crop) dan resolusi tinggi HD. Aman, privasi terjaga, dan otomatis logout seketika.">
+  <meta name="author" content="Mang Rusdi">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://ppfull.mangrusdi.my.id/">
+
+  <!-- Favicon & PWA Icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#111b21">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ppfull.mangrusdi.my.id/">
+  <meta property="og:title" content="WhatsApp Full Profile Picture | No Crop HD">
+  <meta property="og:description" content="Ubah foto profil WhatsApp menjadi ukuran penuh tanpa terpotong (No Crop) dengan kualitas jernih dan aman.">
+  <meta property="og:image" content="https://ppfull.mangrusdi.my.id/icon-512.png">
+  <meta property="og:site_name" content="WA Full Profile Picture">
+  <meta property="og:locale" content="id_ID">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://ppfull.mangrusdi.my.id/">
+  <meta name="twitter:title" content="WhatsApp Full Profile Picture | No Crop HD">
+  <meta name="twitter:description" content="Pasang foto profil WhatsApp ukuran penuh tanpa terpotong secara instan dan aman.">
+  <meta name="twitter:image" content="https://ppfull.mangrusdi.my.id/icon-512.png">
+
+  <!-- Google Search Console Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://ppfull.mangrusdi.my.id/#website",
+        "url": "https://ppfull.mangrusdi.my.id/",
+        "name": "WA Full Profile Picture",
+        "description": "Pasang foto profil WhatsApp ukuran penuh tanpa terpotong (No Crop) dan resolusi tinggi HD.",
+        "inLanguage": "id-ID"
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://ppfull.mangrusdi.my.id/#app",
+        "name": "WhatsApp Full Profile Picture Tool",
+        "url": "https://ppfull.mangrusdi.my.id/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "IDR"
+        }
+      }
+    ]
+  }
+  </script>
+  
+  <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
   
-  <!-- Cloudflare Turnstile Explicit Render API -->
+  <!-- Cloudflare Turnstile API -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
-  <!-- Ambient background glow elements -->
-  <div class="bg-glow glow-1"></div>
-  <div class="bg-glow glow-2"></div>
-  <div class="bg-glow glow-3"></div>
+  <div class="app-layout">
+    <!-- Navbar -->
+    <header class="top-nav">
+      <div class="nav-content">
+        <a href="/" class="brand-badge" aria-label="Beranda WA Full Profile">
+          <img src="/favicon-32x32.png" width="30" height="30" alt="Favicon" class="brand-avatar">
+          <div class="brand-meta">
+            <span class="brand-name">WA Full Profile</span>
+            <span class="brand-tag">HD No-Crop</span>
+          </div>
+        </a>
 
-  <div class="app-wrapper">
-    <!-- Header -->
-    <header class="navbar">
-      <div class="brand">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
+        <div class="nav-actions">
+          <button id="server-status-btn" class="status-indicator status-checking" type="button" title="Periksa status koneksi server">
+            <span class="status-indicator-dot"></span>
+            <span id="server-status-text">Memeriksa Server...</span>
+          </button>
+
+          <button id="btn-open-settings" class="btn-icon" type="button" title="Pengaturan Server" aria-label="Pengaturan Server">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
         </div>
-        <div class="brand-text">
-          <span class="brand-title">WA Full Profile</span>
-          <span class="badge">No-Crop HD</span>
-        </div>
-      </div>
-
-      <div class="header-actions">
-        <!-- Connection status pill -->
-        <button id="server-status-btn" class="status-pill status-checking" title="Klik untuk atur Backend URL">
-          <span class="status-dot"></span>
-          <span id="server-status-text">Memeriksa Backend...</span>
-        </button>
-
-        <button id="btn-open-settings" class="icon-btn" title="Pengaturan Server">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-        </button>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main-card glass-panel">
-      <!-- App Header Banner -->
-      <section class="hero-section">
-        <h1 class="main-heading">Foto Profil WhatsApp Ukuran Penuh</h1>
-        <p class="sub-heading">Pasang foto profil tanpa terpotong (No Crop) dan tanpa kompresi buram. Sesi WhatsApp otomatis dikeluarkan seketika setelah foto terpasang.</p>
-      </section>
+    <!-- Main Card Container -->
+    <main class="main-content">
+      <div class="card-panel">
+        <!-- Hero Title -->
+        <div class="header-intro">
+          <h1 class="page-title">Foto Profil WhatsApp Ukuran Penuh</h1>
+          <p class="page-desc">Pasang foto profil tanpa terpotong dan tanpa kompresi buram. Sesi WhatsApp otomatis dikeluarkan seketika setelah foto terpasang demi privasi Anda.</p>
+        </div>
 
-      <!-- Step Indicator -->
-      <div class="steps-progress" id="steps-progress">
-        <div class="step-item active" id="step-nav-1">
-          <div class="step-circle">1</div>
-          <span class="step-label">Upload Foto</span>
-        </div>
-        <div class="step-line" id="step-line-1"></div>
-        <div class="step-item" id="step-nav-2">
-          <div class="step-circle">2</div>
-          <span class="step-label">Verifikasi WA</span>
-        </div>
-        <div class="step-line" id="step-line-2"></div>
-        <div class="step-item" id="step-nav-3">
-          <div class="step-circle">3</div>
-          <span class="step-label">Selesai</span>
-        </div>
-      </div>
-
-      <!-- VIEW 1: Upload & Adjust -->
-      <section id="view-upload" class="view-panel active">
-        <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/jpg" hidden>
-          
-          <div class="drop-empty" id="drop-empty">
-            <div class="upload-icon-bubble">
-              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-            </div>
-            <h3 class="upload-title">Tarik & Lepas Foto di Sini</h3>
-            <p class="upload-subtitle">atau <span class="browse-link">pilih dari perangkat Anda</span></p>
-            <div class="format-tags">
-              <span class="tag">JPG</span>
-              <span class="tag">PNG</span>
-              <span class="tag">WEBP</span>
-              <span class="tag-highlight">Rasio vertikal 9:16 disarankan</span>
-            </div>
+        <!-- Progress Steps -->
+        <nav class="flow-steps" aria-label="Alur Pemasangan Foto">
+          <div class="flow-step active" id="step-nav-1">
+            <span class="step-num">1</span>
+            <span class="step-text">Pilih Foto</span>
           </div>
+          <div class="flow-divider" id="step-line-1"></div>
+          <div class="flow-step" id="step-nav-2">
+            <span class="step-num">2</span>
+            <span class="step-text">Tautkan WhatsApp</span>
+          </div>
+          <div class="flow-divider" id="step-line-2"></div>
+          <div class="flow-step" id="step-nav-3">
+            <span class="step-num">3</span>
+            <span class="step-text">Selesai</span>
+          </div>
+        </nav>
 
-          <div class="drop-preview hidden" id="drop-preview">
-            <div class="preview-container">
-              <img id="preview-image" src="" alt="Preview Foto Profil">
-              <div class="preview-guide-overlay" title="Rasio 9:16 yang akan dipasang">
-                <span class="overlay-badge">Preview 9:16</span>
+        <!-- VIEW 1: Upload & Adjust -->
+        <section id="view-upload" class="stage-view active">
+          <!-- Dropzone -->
+          <div class="file-uploader" id="drop-zone" role="button" tabindex="0" aria-label="Area unggah foto profil">
+            <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/jpg" aria-label="Pilih file gambar foto profil" hidden>
+            
+            <div class="upload-idle" id="drop-empty">
+              <div class="upload-icon-container">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <h2 class="upload-lead">Pilih atau Tarik Foto ke Sini</h2>
+              <p class="upload-sub">Format JPG, PNG, atau WEBP didukung</p>
+              <div class="format-badges">
+                <span class="badge-item">Resolusi Penuh</span>
+                <span class="badge-item highlight">Rasio 9:16 Disarankan</span>
               </div>
             </div>
-            <div class="preview-info">
-              <div class="file-details">
-                <span class="file-name" id="file-name-display">foto.jpg</span>
-                <span class="file-dim" id="file-dim-display">1080 x 1920 px</span>
+
+            <!-- Preview Card -->
+            <div class="upload-preview hidden" id="drop-preview">
+              <div class="dual-preview-grid">
+                <!-- Preview Full Vertical -->
+                <div class="preview-box">
+                  <span class="preview-label">Tampilan Penuh (Detail Foto)</span>
+                  <div class="preview-frame-rect">
+                    <img id="preview-image" src="" alt="Preview Foto Profil Penuh">
+                  </div>
+                </div>
+
+                <!-- Preview Circular Avatar -->
+                <div class="preview-box">
+                  <span class="preview-label">Preview di Obrolan WhatsApp</span>
+                  <div class="preview-avatar-wrap">
+                    <div class="preview-avatar-circle">
+                      <img id="preview-avatar-circle-img" src="" alt="Preview Avatar Lingkaran">
+                    </div>
+                    <span class="avatar-online-dot" title="Simulasi avatar WhatsApp"></span>
+                  </div>
+                  <span class="preview-hint">Tampilan foto saat dilihat di kontak</span>
+                </div>
               </div>
-              <button type="button" id="btn-change-image" class="btn-secondary btn-sm">Ganti Foto</button>
+
+              <div class="preview-actions-bar">
+                <div class="file-summary">
+                  <span class="file-title" id="file-name-display">foto.jpg</span>
+                  <span class="file-res" id="file-dim-display">1080 x 1920 px</span>
+                </div>
+                <button type="button" id="btn-change-image" class="btn-subtle">Ganti Foto</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Connection Method Choice -->
-        <div class="method-selector">
-          <label class="selector-label">Metode Tautkan WhatsApp:</label>
-          <div class="tab-options">
-            <button type="button" class="tab-btn active" id="tab-qr" data-method="qr">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-              Scan QR Code
-            </button>
-            <button type="button" class="tab-btn" id="tab-phone" data-method="phone">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-              </svg>
-              Kode Pairing (Nomor HP)
-            </button>
-          </div>
-
-          <div id="phone-input-group" class="phone-input-group hidden">
-            <label for="input-phone-number">Nomor WhatsApp (dengan kode negara):</label>
-            <div class="input-with-prefix">
-              <span class="phone-prefix">+</span>
-              <input type="tel" id="input-phone-number" placeholder="6281234567890">
+          <!-- Connection Mode Switcher -->
+          <div class="method-box">
+            <label class="form-label">Metode Tautkan WhatsApp:</label>
+            <div class="segmented-control" role="tablist">
+              <button type="button" class="segment-btn active" id="tab-qr" data-method="qr" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                Scan Kode QR
+              </button>
+              <button type="button" class="segment-btn" id="tab-phone" data-method="phone" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                Kode Pairing (Nomor HP)
+              </button>
             </div>
-            <p class="input-help">Contoh: 628123456789 (tanpa tanda strip atau spasi)</p>
+
+            <!-- Phone Input Field -->
+            <div id="phone-input-group" class="phone-box hidden">
+              <label for="input-phone-number" class="sub-label">Nomor WhatsApp (Format Internasional):</label>
+              <div class="input-phone-wrapper">
+                <span class="phone-sign">+</span>
+                <input type="tel" id="input-phone-number" placeholder="6281234567890" autocomplete="tel">
+              </div>
+              <p class="field-guide">Contoh: <strong>6281234567890</strong> (Gunakan kode negara 62, tanpa angka 0 di depan).</p>
+            </div>
           </div>
-        </div>
 
-        <!-- Cloudflare Turnstile Anti-Bot Security Widget -->
-        <div id="turnstile-wrapper" class="turnstile-wrapper hidden">
-          <div id="turnstile-widget" class="turnstile-widget"></div>
-          <p id="turnstile-feedback" class="turnstile-feedback"></p>
-        </div>
+          <!-- Cloudflare Turnstile Verification -->
+          <div id="turnstile-wrapper" class="turnstile-container hidden">
+            <div id="turnstile-widget" class="turnstile-slot"></div>
+            <p id="turnstile-feedback" class="turnstile-note"></p>
+          </div>
 
-        <!-- Start Action Button -->
-        <div class="action-row">
-          <button type="button" id="btn-start-process" class="btn-primary" disabled>
-            <span class="btn-text">Mulai Proses</span>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-        </div>
-      </section>
+          <!-- Submit Button -->
+          <div class="submit-container">
+            <button type="button" id="btn-start-process" class="btn-action" disabled>
+              <span class="btn-caption">Mulai Pasang Foto Profil</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </section>
 
-      <!-- VIEW 2: Scanning & Processing -->
-      <section id="view-scan" class="view-panel hidden">
-        <div class="scan-wrapper">
-          <!-- QR Display Box -->
-          <div id="qr-box" class="qr-box">
-            <div class="qr-frame">
-              <div class="laser-scanner"></div>
-              <img id="qr-image" src="" alt="QR Code WhatsApp" class="qr-img hidden">
+        <!-- VIEW 2: Scanning & Processing -->
+        <section id="view-scan" class="stage-view hidden">
+          <div class="verify-layout">
+            <!-- QR Display Box -->
+            <div id="qr-box" class="qr-panel">
+              <div class="qr-canvas-holder">
+                <img id="qr-image" src="" alt="Kode QR WhatsApp" class="qr-visual hidden">
+                
+                <div id="qr-loading-spinner" class="loader-box">
+                  <div class="circular-spin"></div>
+                  <p class="loader-text">Menyiapkan koneksi WhatsApp...</p>
+                </div>
+              </div>
+
+              <div class="instruction-box">
+                <p class="guide-lead">Langkah Scan di WhatsApp HP Anda:</p>
+                <ol class="guide-steps">
+                  <li>Buka WhatsApp pada ponsel Anda</li>
+                  <li>Buka <strong>Pengaturan / Menu Titik Tiga</strong> &gt; <strong>Perangkat Tertaut</strong></li>
+                  <li>Pilih <strong>Tautkan Perangkat</strong> lalu arahkan kamera ke kode QR di atas</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Pairing Code Display Box -->
+            <div id="pairing-box" class="pairing-panel hidden">
+              <p class="pairing-header">Masukkan Kode Pairing pada Ponsel Anda:</p>
               
-              <div id="qr-loading-spinner" class="spinner-container">
-                <div class="ring-spinner"></div>
-                <p class="spinner-text">Menghubungkan ke WhatsApp...</p>
+              <div class="pairing-code-card">
+                <span class="pairing-code-val" id="pairing-code-text">------</span>
+                <button type="button" id="btn-copy-pairing" class="btn-copy" title="Salin kode pairing">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span id="copy-btn-text">Salin</span>
+                </button>
+              </div>
+
+              <div class="instruction-box">
+                <p class="guide-lead">Cara Memasukkan Kode di WhatsApp HP:</p>
+                <ol class="guide-steps">
+                  <li>Buka notifikasi WhatsApp di HP atau masuk ke <strong>Perangkat Tertaut</strong></li>
+                  <li>Pilih <strong>Tautkan dengan nomor telepon</strong></li>
+                  <li>Ketikkan 8 karakter kode pairing yang tertera di atas</li>
+                </ol>
               </div>
             </div>
 
-            <p class="scan-instructions" id="scan-instructions">
-              Buka WhatsApp di HP &gt; Menu Titik Tiga / Pengaturan &gt; <strong>Perangkat Tertaut</strong> &gt; <strong>Tautkan Perangkat</strong>.
-            </p>
-          </div>
-
-          <!-- Pairing Code Display Box -->
-          <div id="pairing-box" class="pairing-box hidden">
-            <p class="pairing-title">Masukkan Kode Pairing ini pada WhatsApp HP Anda:</p>
-            <div class="code-display" id="pairing-code-text">------</div>
-            <p class="scan-instructions">
-              Notifikasi pairing akan muncul di ponsel Anda, ketuk dan masukkan kode di atas.
-            </p>
-          </div>
-
-          <!-- Live Status Log Card -->
-          <div class="status-log-card">
-            <div class="log-indicator">
-              <span class="pulsing-dot"></span>
-              <span class="log-title">Status Pemrosesan</span>
+            <!-- Live Status Message -->
+            <div class="live-status-block">
+              <div class="pulse-indicator">
+                <span class="live-dot"></span>
+                <span class="live-heading">Status Proses</span>
+              </div>
+              <p class="live-info" id="live-status-message">Menyiapkan koneksi aman...</p>
             </div>
-            <p class="log-message" id="live-status-message">Menyiapkan koneksi aman...</p>
+
+            <!-- Cancel Button -->
+            <div class="cancel-wrap">
+              <button type="button" id="btn-cancel-session" class="btn-cancel">
+                Batalkan Sesi
+              </button>
+            </div>
           </div>
+        </section>
 
-          <!-- Cancel / Abort Button -->
-          <button type="button" id="btn-cancel-session" class="btn-danger-outline btn-sm">
-            Batalkan Sesi
-          </button>
-        </div>
-      </section>
-
-      <!-- VIEW 3: Success Completed -->
-      <section id="view-success" class="view-panel hidden">
-        <div class="success-box">
-          <div class="success-checkmark">
-            <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#10b981" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-
-          <h2 class="success-title">Foto Profil Berhasil Dipasang!</h2>
-          <p class="success-desc" id="success-desc-text">
-            Foto profil WhatsApp Anda kini telah tampil dalam resolusi penuh (Full HD) tanpa terpotong (No-Crop).
-          </p>
-
-          <div class="security-guarantee-card">
-            <div class="shield-icon">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#25d366" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <!-- VIEW 3: Success Completed -->
+        <section id="view-success" class="stage-view hidden">
+          <div class="done-panel">
+            <div class="done-icon-circle">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#25d366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </div>
-            <div class="shield-text">
-              <h4>Privasi 100% Terjaga & Aman</h4>
-              <p>Sesi WhatsApp Web telah langsung dikeluarkan (<strong>Logged Out</strong>) secara otomatis dari perangkat Anda. Tidak ada pesan, kontak, atau data yang disimpan.</p>
+
+            <h2 class="done-title">Foto Profil Berhasil Dipasang</h2>
+            <p class="done-subtitle" id="success-desc-text">
+              Foto profil WhatsApp Anda kini telah tampil dalam resolusi penuh tanpa terpotong (No Crop).
+            </p>
+
+            <div class="security-card">
+              <div class="shield-badge">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#00a884" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </div>
+              <div class="shield-info">
+                <h3 class="shield-heading">Privasi Terjaga &amp; Aman</h3>
+                <p class="shield-desc">Sesi WhatsApp Web telah langsung dikeluarkan (<strong>Logged Out</strong>) secara otomatis. Tidak ada pesan, kontak, atau data pribadi yang disimpan di server.</p>
+              </div>
+            </div>
+
+            <div class="done-actions">
+              <button type="button" id="btn-restart" class="btn-action">
+                Pasang Foto Baru
+              </button>
             </div>
           </div>
-
-          <button type="button" id="btn-restart" class="btn-primary">
-            Ubah Foto Lain
-          </button>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
 
-    <!-- Settings Modal (Backend URL Config) -->
-    <div id="settings-modal" class="modal-overlay hidden">
-      <div class="modal-card glass-panel">
-        <div class="modal-header">
-          <h3 class="modal-title">Pengaturan Server Backend</h3>
-          <button type="button" id="btn-close-modal" class="close-btn">&times;</button>
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
+      <div class="modal-window">
+        <div class="modal-top">
+          <h2 id="modal-heading" class="modal-header-title">Pengaturan Server Backend</h2>
+          <button type="button" id="btn-close-modal" class="btn-modal-close" aria-label="Tutup pengaturan">&times;</button>
         </div>
-        <div class="modal-body">
-          <p class="modal-info">
-            Jika frontend ini di-deploy di <strong>Vercel</strong> dan backend di <strong>Hugging Face Spaces</strong>, masukkan URL Hugging Face Space Anda di bawah ini:
+        <div class="modal-content">
+          <p class="modal-explanation">
+            Jika frontend ini di-deploy di Vercel atau sub-domain terpisah, Anda dapat menghubungkannya ke alamat backend khusus di bawah ini:
           </p>
-          <div class="form-group">
-            <label for="input-backend-url">URL Backend Server:</label>
-            <input type="text" id="input-backend-url" placeholder="Contoh: https://username-spacename.hf.space">
-            <span class="field-hint">Kosongkan jika backend dan frontend berada di domain yang sama (atau dijalankan lokal).</span>
+          <div class="form-field">
+            <label for="input-backend-url" class="field-label">URL Backend Server:</label>
+            <input type="text" id="input-backend-url" class="field-input" placeholder="Contoh: https://ppfull.mangrusdi.my.id">
+            <span class="field-note">Kosongkan jika frontend dan backend berada dalam satu domain atau server lokal.</span>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" id="btn-save-settings" class="btn-primary btn-sm">Simpan Pengaturan</button>
+        <div class="modal-bottom">
+          <button type="button" id="btn-save-settings" class="btn-action btn-compact">Simpan Pengaturan</button>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <footer class="footer">
-      <p>Dibuat menggunakan <a href="https://github.com/tulir/whatsmeow" target="_blank" rel="noopener">whatsmeow</a> &bull; WhatsApp Full Profile Picture Tool</p>
-      <p class="disclaimer">Aplikasi ini tidak berafiliasi dengan WhatsApp Inc. Sesi hanya berjalan sementara untuk mengunggah foto lalu seketika logout.</p>
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <p class="footer-tech">
+          Ditenagai oleh <a href="https://github.com/tulir/whatsmeow" target="_blank" rel="noopener">whatsmeow</a> &bull; WhatsApp Full Profile Picture Tool
+        </p>
+        <p class="footer-legal">
+          Alat ini tidak berafiliasi dengan WhatsApp Inc. Sesi hanya berjalan sementara untuk mengunggah foto profil kemudian seketika keluar.
+        </p>
+      </div>
     </footer>
   </div>
 
