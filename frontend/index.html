@@ -85,17 +85,31 @@
     <header class="top-nav">
       <div class="nav-content">
         <a href="/" class="brand-badge" aria-label="Beranda WA Full Profile">
-          <img src="/favicon-32x32.png" width="30" height="30" alt="Favicon" class="brand-avatar">
-          <div class="brand-meta">
-            <span class="brand-name">WA Full Profile</span>
-            <span class="brand-tag">HD No-Crop</span>
-          </div>
+          <img src="/favicon-32x32.png" width="28" height="28" alt="Favicon" class="brand-avatar">
+          <span class="brand-name">WA Full Profile</span>
         </a>
 
         <div class="nav-actions">
           <button id="server-status-btn" class="status-indicator status-checking" type="button" title="Periksa status koneksi server">
             <span class="status-indicator-dot"></span>
             <span id="server-status-text">Memeriksa Server...</span>
+          </button>
+
+          <button id="btn-theme-toggle" class="btn-icon" type="button" title="Beralih Tema Terang/Gelap" aria-label="Beralih Tema">
+            <svg id="theme-icon-sun" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg id="theme-icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
           </button>
 
           <button id="btn-open-settings" class="btn-icon" type="button" title="Pengaturan Server" aria-label="Pengaturan Server">
@@ -114,7 +128,23 @@
         <!-- Hero Title -->
         <div class="header-intro">
           <h1 class="page-title">Foto Profil WhatsApp Ukuran Penuh</h1>
-          <p class="page-desc">Pasang foto profil tanpa terpotong dan tanpa kompresi buram. Sesi WhatsApp otomatis dikeluarkan seketika setelah foto terpasang demi privasi Anda.</p>
+          <p class="page-desc">Pasang foto profil WhatsApp tanpa terpotong (No Crop) dan beresolusi tajam. Sesi WhatsApp otomatis dikeluarkan seketika setelah foto terpasang demi keamanan privasi Anda.</p>
+        </div>
+
+        <!-- Informative Guide Callout -->
+        <div class="info-note" role="note">
+          <div class="info-note-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <div class="info-note-content">
+            <p class="info-note-text">
+              <strong>Mengapa menggunakan alat ini?</strong> Aplikasi WhatsApp ponsel memotong foto menjadi persegi (1:1). Alat ini mengirim foto vertikal beresolusi hingga 535x720 px melalui protokol WhatsApp Web agar tetap utuh saat dilihat di info kontak.
+            </p>
+          </div>
         </div>
 
         <!-- Progress Steps -->
@@ -139,22 +169,19 @@
         <section id="view-upload" class="stage-view active">
           <!-- Dropzone -->
           <div class="file-uploader" id="drop-zone" role="button" tabindex="0" aria-label="Area unggah foto profil">
+            <label for="file-input" class="hidden">Pilih File Foto Profil</label>
             <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/jpg" aria-label="Pilih file gambar foto profil" hidden>
             
             <div class="upload-idle" id="drop-empty">
-              <div class="upload-icon-container">
-                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <polyline points="21 15 16 10 5 21"></polyline>
+              <div class="upload-icon-container" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
               </div>
-              <h2 class="upload-lead">Pilih atau Tarik Foto ke Sini</h2>
-              <p class="upload-sub">Format JPG, PNG, atau WEBP didukung</p>
-              <div class="format-badges">
-                <span class="badge-item">Resolusi Penuh</span>
-                <span class="badge-item highlight">Rasio 9:16 Disarankan</span>
-              </div>
+              <h2 class="upload-lead">Pilih atau Seret Foto ke Sini</h2>
+              <p class="upload-sub">Mendukung format JPG, PNG, atau WEBP. Disarankan rasio vertikal (3:4 atau 9:16) agar pas di layar profil WhatsApp.</p>
             </div>
 
             <!-- Preview Card -->
@@ -162,7 +189,7 @@
               <div class="dual-preview-grid">
                 <!-- Preview Full Vertical -->
                 <div class="preview-box">
-                  <span class="preview-label">Tampilan Penuh (Detail Foto)</span>
+                  <span class="preview-label">Tampilan Penuh (Saat Foto Dibuka)</span>
                   <div class="preview-frame-rect">
                     <img id="preview-image" src="" alt="Preview Foto Profil Penuh">
                   </div>
@@ -170,14 +197,13 @@
 
                 <!-- Preview Circular Avatar -->
                 <div class="preview-box">
-                  <span class="preview-label">Preview di Obrolan WhatsApp</span>
+                  <span class="preview-label">Tampilan Lingkaran (Daftar Obrolan)</span>
                   <div class="preview-avatar-wrap">
                     <div class="preview-avatar-circle">
                       <img id="preview-avatar-circle-img" src="" alt="Preview Avatar Lingkaran">
                     </div>
-                    <span class="avatar-online-dot" title="Simulasi avatar WhatsApp"></span>
                   </div>
-                  <span class="preview-hint">Tampilan foto saat dilihat di kontak</span>
+                  <span class="preview-hint">Bagian tengah yang terlihat pada ikon avatar obrolan</span>
                 </div>
               </div>
 

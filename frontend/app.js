@@ -85,6 +85,11 @@ const liveStatusMessage = document.getElementById('live-status-message');
 const btnCancelSession = document.getElementById('btn-cancel-session');
 const btnRestart = document.getElementById('btn-restart');
 
+// Theme Elements
+const btnThemeToggle = document.getElementById('btn-theme-toggle');
+const themeIconSun = document.getElementById('theme-icon-sun');
+const themeIconMoon = document.getElementById('theme-icon-moon');
+
 // Settings Elements
 const serverStatusBtn = document.getElementById('server-status-btn');
 const serverStatusText = document.getElementById('server-status-text');
@@ -345,7 +350,20 @@ function handleSelectedFile(file) {
     tempImg.onload = () => {
       let w = tempImg.naturalWidth;
       let h = tempImg.naturalHeight;
-      fileDimDisplay.textContent = `${w} x ${h} px`;
+
+      // Hitung label rasio yang informatif
+      let ratioText = 'Rasio Vertikal';
+      const ratio = w / h;
+      if (Math.abs(ratio - 9 / 16) < 0.08) {
+        ratioText = 'Rasio 9:16 (Ideal No Crop)';
+      } else if (Math.abs(ratio - 3 / 4) < 0.08) {
+        ratioText = 'Rasio 3:4 (Vertikal)';
+      } else if (Math.abs(ratio - 1) < 0.08) {
+        ratioText = 'Rasio 1:1 (Persegi)';
+      } else if (ratio > 1.2) {
+        ratioText = 'Rasio Horizontal (Kurang optimal)';
+      }
+      fileDimDisplay.textContent = `${tempImg.naturalWidth} x ${tempImg.naturalHeight} px (${ratioText})`;
 
       // Scale to max 1080x1920 for fast network transfer
       const maxW = 1080;
@@ -686,9 +704,43 @@ function initCopyButton() {
 }
 
 /* ==========================================================================
+   Theme Management (Light / Dark)
+   ========================================================================== */
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('wa_pfp_theme', theme);
+  if (theme === 'dark') {
+    if (themeIconSun) themeIconSun.classList.remove('hidden');
+    if (themeIconMoon) themeIconMoon.classList.add('hidden');
+  } else {
+    if (themeIconSun) themeIconSun.classList.add('hidden');
+    if (themeIconMoon) themeIconMoon.classList.remove('hidden');
+  }
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('wa_pfp_theme');
+  if (saved === 'dark' || saved === 'light') {
+    applyTheme(saved);
+  } else {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
+
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+    });
+  }
+}
+
+/* ==========================================================================
    Initialization
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   initDropZone();
   initTabs();
   initSettings();
