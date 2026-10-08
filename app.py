@@ -54,8 +54,8 @@ def start_keep_alive():
         
         while True:
             try:
-                # Interval ping setiap 15 menit (HF idle sleep threshold adalah 48 jam)
-                time.sleep(15 * 60)
+                # Interval ping setiap 5 menit agar Space selalu terjaga aktif
+                time.sleep(5 * 60)
                 req = urllib.request.Request(
                     target_url,
                     headers={"User-Agent": "HF-Space-SelfKeepAlive/1.0"}

@@ -7,25 +7,24 @@ const DEFAULT_HF_BACKEND = 'https://ilhamdev-wa-full-pfp.hf.space';
 function getDefaultBackendUrl() {
   const saved = localStorage.getItem('wa_pfp_backend_url');
   if (saved && saved.trim() !== '') {
-    return saved.trim();
+    const cleanSaved = saved.trim().replace(/\/+$/, '');
+    // Abaikan jika sebelumnya tersimpan URL frontend Vercel/mangrusdi.my.id yang bukan backend Go
+    if (!cleanSaved.includes('mangrusdi.my.id') && !cleanSaved.includes('vercel.app')) {
+      return cleanSaved;
+    }
+    localStorage.removeItem('wa_pfp_backend_url');
   }
-  // Jika dibuka di domain kustom / subdomain mangrusdi.my.id
-  if (window.location.hostname.includes('mangrusdi.my.id')) {
-    return window.location.origin;
-  }
-  // Jika dibuka lokal di komputer (localhost/127.0.0.1)
+  // Jika dibuka lokal di komputer saat development (localhost/127.0.0.1)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return window.location.origin;
   }
-  // Jika dibuka langsung di web space Hugging Face
+  // Jika dibuka langsung di dalam web space Hugging Face
   if (window.location.hostname.includes('hf.space')) {
     return window.location.origin;
   }
-  // Default jika di Vercel:
-  if (window.location.hostname.includes('vercel.app')) {
-    return DEFAULT_HF_BACKEND;
-  }
-  return window.location.origin || DEFAULT_HF_BACKEND;
+  // Default utama untuk produksi (misal di https://ppfull.mangrusdi.my.id/ atau Vercel):
+  // Langsung terhubung ke backend resmi Hugging Face agar pengguna awam tinggal upload foto saja
+  return DEFAULT_HF_BACKEND;
 }
 
 // Application State
@@ -230,7 +229,7 @@ async function fetchBackendConfig() {
 async function checkBackendHealth() {
   const base = getBackendHttpUrl();
   if (!isWakingUp) {
-    serverStatusBtn.className = 'status-pill status-checking';
+    serverStatusBtn.className = 'status-indicator status-checking';
     serverStatusText.textContent = 'Memeriksa Backend...';
   }
 
@@ -247,27 +246,27 @@ async function checkBackendHealth() {
 
     if (res.ok) {
       isWakingUp = false;
-      serverStatusBtn.className = 'status-pill status-online';
-      serverStatusText.textContent = 'Backend Online';
+      serverStatusBtn.className = 'status-indicator status-online';
+      serverStatusText.textContent = 'Backend Online (Siap)';
       // Ambil konfigurasi publik dari backend saat online
       fetchBackendConfig();
     } else if (res.status === 502 || res.status === 503 || res.status === 504) {
       isWakingUp = true;
-      serverStatusBtn.className = 'status-pill status-waking';
-      serverStatusText.textContent = 'Membangunkan Server (~30d)...';
-      setTimeout(checkBackendHealth, 5000);
+      serverStatusBtn.className = 'status-indicator status-waking';
+      serverStatusText.textContent = 'Membangunkan Server (~25d)...';
+      setTimeout(checkBackendHealth, 4000);
     } else {
       throw new Error(`Status ${res.status}`);
     }
   } catch (err) {
     if (err.name === 'AbortError' || isWakingUp) {
       isWakingUp = true;
-      serverStatusBtn.className = 'status-pill status-waking';
-      serverStatusText.textContent = 'Membangunkan Server (~30d)...';
-      setTimeout(checkBackendHealth, 5000);
+      serverStatusBtn.className = 'status-indicator status-waking';
+      serverStatusText.textContent = 'Membangunkan Server (~25d)...';
+      setTimeout(checkBackendHealth, 4000);
     } else {
       isWakingUp = false;
-      serverStatusBtn.className = 'status-pill status-offline';
+      serverStatusBtn.className = 'status-indicator status-offline';
       serverStatusText.textContent = 'Backend Offline';
     }
   }
