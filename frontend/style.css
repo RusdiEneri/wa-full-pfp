@@ -1100,35 +1100,57 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   Turnstile Container
+   Cloudflare Turnstile Anti-Bot Verification
    ========================================================================== */
 
-.turnstile-container {
+.turnstile-container,
+.turnstile-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 24px;
+  justify-content: center;
+  margin: 18px 0 14px;
+  padding: 14px 16px;
+  background-color: var(--bg-canvas);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 2px 2px 0 var(--shadow-color);
   width: 100%;
+  transition: border-color var(--speed-normal), box-shadow var(--speed-normal);
 }
 
-.turnstile-slot {
+.turnstile-container:hover,
+.turnstile-wrapper:hover {
+  border-color: var(--color-primary);
+}
+
+.turnstile-slot,
+.turnstile-widget {
   min-height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   max-width: 100%;
   overflow-x: auto;
 }
 
-.turnstile-note {
-  font-size: 0.8rem;
-  font-weight: 600;
+.turnstile-note,
+.turnstile-feedback {
+  font-size: 0.82rem;
+  font-weight: 700;
   margin-top: 8px;
   text-align: center;
+  color: var(--text-sub);
+  line-height: 1.4;
 }
 
-.turnstile-note.success {
+.turnstile-note.success,
+.turnstile-feedback.success {
   color: var(--color-success);
 }
 
-.turnstile-note.error {
+.turnstile-note.error,
+.turnstile-feedback.error {
   color: var(--color-secondary);
 }
 

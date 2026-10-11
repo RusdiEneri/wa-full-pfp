@@ -128,8 +128,7 @@ func registerConfigEndpoint(mux *http.ServeMux) {
 		w.Header().Set("Content-Type", "application/json")
 
 		siteKey := os.Getenv("TURNSTILE_SITE_KEY")
-		secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
-		isEnabled := siteKey != "" && secretKey != ""
+		isEnabled := siteKey != ""
 
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"turnstile_enabled":  isEnabled,

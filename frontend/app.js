@@ -16,6 +16,7 @@ function trackEvent(eventName, eventParams = {}) {
 }
 
 const DEFAULT_HF_BACKEND = 'https://ilhamdev-wa-full-pfp.hf.space';
+const DEFAULT_TURNSTILE_SITE_KEY = '0x4AAAAAAFQXC-hDYo4lIswr';
 
 function getDefaultBackendUrl() {
   const saved = localStorage.getItem('wa_pfp_backend_url');
@@ -47,8 +48,8 @@ const state = {
   socket: null,
   backendUrl: getDefaultBackendUrl(),
   isProcessing: false,
-  turnstileEnabled: false,
-  turnstileSiteKey: null,
+  turnstileEnabled: true,
+  turnstileSiteKey: DEFAULT_TURNSTILE_SITE_KEY,
   turnstileToken: null,
   turnstileWidgetId: null,
 };
@@ -139,13 +140,16 @@ let isWakingUp = false;
 function updateStartButtonState() {
   if (!state.currentImageBase64) {
     btnStart.disabled = true;
+    btnStart.title = 'Pilih foto profil terlebih dahulu';
     return;
   }
   if (state.turnstileEnabled && !state.turnstileToken) {
     btnStart.disabled = true;
+    btnStart.title = 'Selesaikan verifikasi keamanan Cloudflare di atas terlebih dahulu';
     return;
   }
   btnStart.disabled = false;
+  btnStart.title = 'Mulai pasang foto profil';
 }
 
 function resetTurnstile() {
@@ -159,13 +163,21 @@ function resetTurnstile() {
   }
   if (turnstileFeedback) {
     turnstileFeedback.textContent = '';
-    turnstileFeedback.className = 'turnstile-feedback';
+    turnstileFeedback.className = 'turnstile-note';
   }
   updateStartButtonState();
 }
 
 let turnstileRetryCount = 0;
-const MAX_TURNSTILE_RETRIES = 10;
+const MAX_TURNSTILE_RETRIES = 20;
+
+// Callback otomatis saat script Cloudflare Turnstile selesai dimuat
+window.onloadTurnstileCallback = function() {
+  console.log('[Turnstile] Cloudflare Turnstile API siap.');
+  if (state.turnstileEnabled && state.turnstileSiteKey) {
+    renderTurnstileWidget();
+  }
+};
 
 function renderTurnstileWidget() {
   if (!state.turnstileEnabled || !state.turnstileSiteKey) {
@@ -184,12 +196,12 @@ function renderTurnstileWidget() {
       const currentTheme = document.documentElement.getAttribute('data-theme') || 'auto';
       state.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
         sitekey: state.turnstileSiteKey,
-        theme: currentTheme,
+        theme: currentTheme === 'light' ? 'light' : 'dark',
         callback: (token) => {
           state.turnstileToken = token;
           if (turnstileFeedback) {
             turnstileFeedback.textContent = 'Verifikasi keamanan berhasil.';
-            turnstileFeedback.className = 'turnstile-feedback success';
+            turnstileFeedback.className = 'turnstile-note success';
           }
           trackEvent('turnstile_success');
           updateStartButtonState();
@@ -197,8 +209,8 @@ function renderTurnstileWidget() {
         'expired-callback': () => {
           state.turnstileToken = null;
           if (turnstileFeedback) {
-            turnstileFeedback.textContent = 'Verifikasi kedaluwarsa. Silakan verifikasi ulang.';
-            turnstileFeedback.className = 'turnstile-feedback error';
+            turnstileFeedback.textContent = 'Verifikasi kedaluwarsa. Silakan centang ulang.';
+            turnstileFeedback.className = 'turnstile-note error';
           }
           updateStartButtonState();
           if (window.turnstile && state.turnstileWidgetId !== null) {
@@ -208,8 +220,8 @@ function renderTurnstileWidget() {
         'error-callback': () => {
           state.turnstileToken = null;
           if (turnstileFeedback) {
-            turnstileFeedback.textContent = 'Gagal memuat tantangan Cloudflare Turnstile.';
-            turnstileFeedback.className = 'turnstile-feedback error';
+            turnstileFeedback.textContent = 'Gagal memuat verifikasi Cloudflare Turnstile.';
+            turnstileFeedback.className = 'turnstile-note error';
           }
           updateStartButtonState();
         },
@@ -224,7 +236,7 @@ function renderTurnstileWidget() {
     } else {
       if (turnstileFeedback) {
         turnstileFeedback.textContent = 'Gagal memuat Cloudflare Turnstile. Periksa koneksi internet atau matikan ad-blocker.';
-        turnstileFeedback.className = 'turnstile-feedback error';
+        turnstileFeedback.className = 'turnstile-note error';
       }
     }
   }
@@ -239,16 +251,21 @@ async function fetchBackendConfig() {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.turnstile_enabled && data.turnstile_site_key) {
+      if (data.turnstile_enabled !== false && (data.turnstile_site_key || state.turnstileSiteKey)) {
         state.turnstileEnabled = true;
-        state.turnstileSiteKey = data.turnstile_site_key;
+        if (data.turnstile_site_key) {
+          state.turnstileSiteKey = data.turnstile_site_key;
+        }
         renderTurnstileWidget();
       } else {
-        state.turnstileEnabled = false;
-        state.turnstileSiteKey = null;
-        state.turnstileToken = null;
-        if (turnstileWrapper) turnstileWrapper.classList.add('hidden');
-        updateStartButtonState();
+        // Jika server lokal secara sengaja mematikan Turnstile
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          state.turnstileEnabled = false;
+          state.turnstileSiteKey = null;
+          state.turnstileToken = null;
+          if (turnstileWrapper) turnstileWrapper.classList.add('hidden');
+          updateStartButtonState();
+        }
       }
     }
   } catch (err) {
@@ -764,6 +781,17 @@ function applyTheme(theme) {
     if (themeIconSun) themeIconSun.classList.add('hidden');
     if (themeIconMoon) themeIconMoon.classList.remove('hidden');
   }
+
+  // Sinkronkan tema Turnstile dengan tema halaman
+  if (window.turnstile && state.turnstileWidgetId !== null) {
+    try {
+      window.turnstile.remove(state.turnstileWidgetId);
+      state.turnstileWidgetId = null;
+      renderTurnstileWidget();
+    } catch (e) {
+      // Abaikan jika tidak didukung
+    }
+  }
 }
 
 function initTheme() {
@@ -793,6 +821,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initSettings();
   initCopyButton();
+
+  // Inisialisasi awal Turnstile & konfigurasi backend
+  renderTurnstileWidget();
+  fetchBackendConfig();
 
   btnStart.addEventListener('click', startProcess);
   btnCancelSession.addEventListener('click', cancelSession);
