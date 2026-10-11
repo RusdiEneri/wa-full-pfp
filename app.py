@@ -79,7 +79,13 @@ def start_keep_alive():
     t.start()
 
 def setup_and_run():
-    # Catatan: dummy_zero_gpu() sengaja TIDAK dipanggil agar 0 detik kuota ZeroGPU terpakai.
+    # Panggil dummy_zero_gpu dengan durasi minimal 1s untuk registrasi handshake ZeroGPU supervisor
+    try:
+        if "spaces" in sys.modules:
+            dummy_zero_gpu()
+    except Exception as e:
+        print(f"[HF Space] ZeroGPU handshake notice: {e}", flush=True)
+
     server_bin = "./server"
     
     # 1. Kompilasi binary Go jika belum ada
