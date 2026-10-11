@@ -7,7 +7,7 @@ sdk: gradio
 app_file: app.py
 pinned: true
 license: mit
-short_description: Pasang foto profil WhatsApp ukuran penuh tanpa terpotong (No Crop) dan resolusi tinggi HD.
+short_description: Pasang foto profil WhatsApp ukuran penuh No Crop HD.
 ---
 
 # WhatsApp Full Profile Picture (No Crop HD)
