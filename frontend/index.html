@@ -177,12 +177,13 @@
             <div class="ratio-comparison-grid">
               <div class="ratio-item cropped-side">
                 <span class="ratio-badge danger-badge">WhatsApp HP</span>
-                <div class="ratio-box square-box" title="WhatsApp HP memotong foto menjadi persegi 1:1">
-                  <span>1:1</span>
+                <div class="ratio-box square-box" title="WhatsApp HP memotong foto menjadi persegi 1:1 sehingga subjek bawah terpotong">
+                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Simulasi crop 1:1 WhatsApp ponsel" class="ratio-demo-img cropped-img" loading="lazy">
+                  <span class="ratio-tag-overlay tag-cropped">1:1 Crop</span>
                 </div>
                 <span class="ratio-caption">Terpotong Persegi</span>
               </div>
-              <div class="ratio-divider">
+              <div class="ratio-divider" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                   <polyline points="12 5 19 12 12 19"></polyline>
@@ -190,14 +191,15 @@
               </div>
               <div class="ratio-item full-side">
                 <span class="ratio-badge success-badge">WA Full Profile</span>
-                <div class="ratio-box vertical-box" title="Foto tampil penuh rasio 3:4 atau 9:16 tanpa terpotong">
-                  <span>3:4 / 9:16</span>
+                <div class="ratio-box vertical-box" title="Foto tampil penuh rasio 9:16 tanpa terpotong">
+                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Foto vertikal utuh tanpa crop" class="ratio-demo-img full-img" loading="lazy">
+                  <span class="ratio-tag-overlay tag-full">No Crop</span>
                 </div>
                 <span class="ratio-caption">Tampil Utuh (HD)</span>
               </div>
             </div>
             <p class="ratio-guide-note">
-              WhatsApp Web mengizinkan pengunggahan foto vertikal hingga 535x720 px sehingga foto Anda tidak dipaksa menjadi persegi saat dibuka di info kontak.
+              WhatsApp Web mengizinkan foto vertikal hingga 535x720 px sehingga seluruh subjek foto tetap utuh tanpa terpotong saat dibuka di info kontak.
             </p>
           </div>
 
@@ -538,6 +540,7 @@
     </footer>
   </div>
 
+  <script src="demo-asset.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

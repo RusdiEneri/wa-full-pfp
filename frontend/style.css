@@ -480,19 +480,64 @@ button, input, select, textarea {
   font-size: 0.72rem;
   font-weight: 800;
   box-shadow: 2px 2px 0 var(--shadow-color);
+  position: relative;
+  overflow: hidden;
 }
 
 .square-box {
-  width: 56px;
-  height: 56px;
+  width: 96px;
+  height: 96px;
   border-radius: var(--radius-xs);
-  color: var(--text-muted);
 }
 
 .vertical-box {
-  width: 54px;
-  height: 72px;
+  width: 82px;
+  height: 140px;
   border-radius: var(--radius-xs);
+}
+
+.ratio-demo-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cropped-img {
+  object-fit: cover;
+  object-position: center 60%;
+}
+
+.full-img {
+  object-fit: cover;
+  object-position: center center;
+}
+
+.ratio-tag-overlay {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  letter-spacing: 0.02em;
+  box-shadow: 1px 1px 0 var(--shadow-color);
+  z-index: 2;
+}
+
+.tag-cropped {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+[data-theme="dark"] .tag-cropped {
+  background-color: #7F1D1D;
+  color: #FEE2E2;
+}
+
+.tag-full {
   background-color: var(--color-primary);
   color: #121212;
 }

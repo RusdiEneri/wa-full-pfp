@@ -812,11 +812,21 @@ function initTheme() {
   }
 }
 
+function initComparisonDemo() {
+  if (typeof DEMO_COMPARISON_IMAGE !== 'undefined') {
+    const demoImgs = document.querySelectorAll('.ratio-demo-img');
+    demoImgs.forEach((img) => {
+      img.src = DEMO_COMPARISON_IMAGE;
+    });
+  }
+}
+
 /* ==========================================================================
    Initialization
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initComparisonDemo();
   initDropZone();
   initTabs();
   initSettings();
