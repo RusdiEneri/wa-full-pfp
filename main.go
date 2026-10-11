@@ -30,8 +30,8 @@ import (
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
+	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
-	"google.golang.org/protobuf/proto"
 	"rsc.io/qr"
 )
 
@@ -326,15 +326,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Device properties (mimic Chrome on Windows sesuai spesifikasi dan docs whatsmeow)
 	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_CHROME.Enum()
-	store.DeviceProps.Os = proto.String("Windows")
-
-	// PENTING: Gunakan versi WhatsApp Web terkini langsung dari store whatsmeow
-	waVer := store.GetWAVersion()
-	store.DeviceProps.Version = &waCompanionReg.DeviceProps_AppVersion{
-		Primary:   proto.Uint32(waVer[0]),
-		Secondary: proto.Uint32(waVer[1]),
-		Tertiary:  proto.Uint32(waVer[2]),
-	}
+	store.SetOSInfo("Windows", [3]uint32{10, 0, 22631})
 
 	deviceStore, err := container.GetFirstDevice(ctx)
 	if err != nil {
@@ -345,8 +337,34 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientLog := waLog.Stdout("Client", "ERROR", true)
+	clientLog := waLog.Stdout("Client", "INFO", true)
 	client = whatsmeow.NewClient(deviceStore, clientLog)
+
+	connectedChan := make(chan struct{}, 5)
+	loggedOutChan := make(chan struct{}, 5)
+
+	client.AddEventHandler(func(rawEvt any) {
+		switch evt := rawEvt.(type) {
+		case *events.Connected:
+			log.Printf("[Session %s] Event whatsmeow: Connected (terotentikasi)", sessionID)
+			select {
+			case connectedChan <- struct{}{}:
+			default:
+			}
+		case *events.LoggedOut:
+			log.Printf("[Session %s] Event whatsmeow: LoggedOut (reason: %v)", sessionID, evt.Reason)
+			select {
+			case loggedOutChan <- struct{}{}:
+			default:
+			}
+		case *events.StreamReplaced:
+			log.Printf("[Session %s] Event whatsmeow: StreamReplaced", sessionID)
+			select {
+			case loggedOutChan <- struct{}{}:
+			default:
+			}
+		}
+	})
 
 	// Mode 1: Pairing code (via phone number)
 	if inMsg.PairNumber != "" {
@@ -477,6 +495,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				// Event "code" dapat diabaikan saat pairing dengan nomor HP
+			case <-connectedChan:
+				loginSuccess = true
+				break loginLoop
 			case <-time.After(1 * time.Second):
 				if client.Store.ID != nil {
 					loginSuccess = true
@@ -485,7 +506,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if !loginSuccess {
+		if !loginSuccess && client.Store.ID == nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
 				Message: "Waktu pairing habis (timeout). Silakan coba lagi.",
@@ -573,6 +594,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						Message: fmt.Sprintf("Status WhatsApp: %s", evt.Event),
 					})
 				}
+			case <-connectedChan:
+				loginSuccess = true
+				break qrLoop
 			case <-time.After(1 * time.Second):
 				if client.Store.ID != nil {
 					loginSuccess = true
@@ -582,7 +606,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Verify login success
-		if !loginSuccess || client.Store.ID == nil {
+		if !loginSuccess && client.Store.ID == nil {
 			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 				Type:    "error",
 				Message: "Sesi QR dibatalkan atau waktu habis.",
@@ -594,23 +618,21 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Login is successful!
 	_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 		Type:    "status",
-		Message: "Login WhatsApp berhasil! Menyiapkan pemasangan foto profil...",
+		Message: "Login WhatsApp berhasil! Menghubungkan sesi terotentikasi...",
 	})
 
-	// Pastikan koneksi websocket terotentikasi penuh setelah stream restart pasca-pairing
-	if !client.IsConnected() || !client.IsLoggedIn() {
-		log.Printf("[Session %s] Menunggu koneksi WhatsApp terotentikasi penuh...", sessionID)
-		if !client.WaitForConnection(20 * time.Second) {
-			_ = wsjson.Write(ctx, c, WSOutgoingMessage{
-				Type:    "error",
-				Message: "Koneksi WhatsApp belum siap setelah login. Silakan coba lagi.",
-			})
-			return
-		}
-	} else {
-		// Small pause so WhatsApp internal stores settle
-		time.Sleep(1500 * time.Millisecond)
+	log.Printf("[Session %s] Menunggu koneksi WhatsApp terotentikasi penuh pasca-pairing...", sessionID)
+	if err := waitForAuthenticatedSession(ctx, client, connectedChan, loggedOutChan, 35*time.Second); err != nil {
+		log.Printf("[Session %s] Gagal otentikasi pasca-login: %v", sessionID, err)
+		_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+			Type:    "error",
+			Message: fmt.Sprintf("Koneksi WhatsApp belum siap setelah login: %v. Silakan coba lagi.", err),
+		})
+		return
 	}
+
+	// Jeda singkat agar store dan cache protokol WhatsApp stabil sebelum request IQ
+	time.Sleep(1 * time.Second)
 
 	_ = wsjson.Write(ctx, c, WSOutgoingMessage{
 		Type:    "status",
@@ -662,9 +684,12 @@ func logoutSession(client *whatsmeow.Client, sessionID string) {
 		// Pastikan websocket connected & logged in sebelum mengirim remove-companion-device
 		if !client.IsConnected() || !client.IsLoggedIn() {
 			log.Printf("[Session %s] Menunggu koneksi terotentikasi untuk logout (percobaan %d/3)...", sessionID, attempt)
-			if !client.WaitForConnection(5 * time.Second) {
-				_ = client.Connect()
-				_ = client.WaitForConnection(3 * time.Second)
+			_ = client.Connect()
+			for i := 0; i < 15; i++ {
+				if client.IsConnected() && client.IsLoggedIn() {
+					break
+				}
+				time.Sleep(200 * time.Millisecond)
 			}
 		}
 
@@ -689,6 +714,72 @@ func logoutSession(client *whatsmeow.Client, sessionID string) {
 	}
 
 	log.Printf("[Session %s] Peringatan: Auto-logout selesai dengan status error.", sessionID)
+}
+
+// waitForAuthenticatedSession menunggu hingga client WhatsApp terhubung dan terotentikasi penuh pasca-pairing.
+// Fungsi ini menghindari race condition pada stream restart 515 dan tidak bergantung pada client.WaitForConnection
+// yang mengembalikan false seketika saat expectedDisconnect aktif pasca-pairing.
+func waitForAuthenticatedSession(
+	ctx context.Context,
+	client *whatsmeow.Client,
+	connectedChan <-chan struct{},
+	loggedOutChan <-chan struct{},
+	timeout time.Duration,
+) error {
+	if client == nil {
+		return errors.New("client is nil")
+	}
+
+	if client.IsConnected() && client.IsLoggedIn() {
+		return nil
+	}
+
+	timeoutTimer := time.NewTimer(timeout)
+	defer timeoutTimer.Stop()
+
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+
+	// Jika koneksi sempat drop dan auto-reconnect tidak terpicu, bantu dengan Connect() manual
+	nudgeTimer := time.NewTicker(2 * time.Second)
+	defer nudgeTimer.Stop()
+
+	for {
+		if client.IsConnected() && client.IsLoggedIn() {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		case <-timeoutTimer.C:
+			return errors.New("waktu tunggu koneksi terotentikasi habis (timeout)")
+
+		case <-loggedOutChan:
+			return errors.New("sesi WhatsApp dikeluarkan atau dibatalkan dari ponsel")
+
+		case <-connectedChan:
+			if client.IsConnected() && client.IsLoggedIn() {
+				return nil
+			}
+			time.Sleep(300 * time.Millisecond)
+			return nil
+
+		case <-nudgeTimer.C:
+			if !client.IsConnected() && !client.IsLoggedIn() {
+				log.Println("[whatsmeow] Membantu pemulihan koneksi via client.Connect()...")
+				go func() {
+					_ = client.Connect()
+				}()
+			}
+
+		case <-ticker.C:
+			if client.IsConnected() && client.IsLoggedIn() {
+				return nil
+			}
+		}
+	}
 }
 
 // processImage decodes base64, resizes using Lanczos fit to 535x720, and re-encodes as 100% JPEG
