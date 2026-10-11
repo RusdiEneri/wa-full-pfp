@@ -186,14 +186,14 @@ button, input, select, textarea {
 }
 
 .nav-content {
-  max-width: 820px;
+  max-width: 1200px;
   margin: 0 auto;
   min-height: 60px;
-  padding: 8px 16px;
+  padding: 8px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .brand-badge {
@@ -322,15 +322,292 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   Main Content Container
+   Main Content Container & Desktop Workspace Grid
    ========================================================================== */
 
 .main-content {
   flex: 1;
-  max-width: 720px;
+  max-width: 1200px;
   width: 100%;
-  margin: 32px auto 44px;
-  padding: 0 16px;
+  margin: 36px auto 56px;
+  padding: 0 24px;
+}
+
+/* 2-Column Desktop Grid */
+.desktop-workspace-grid {
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 36px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+
+/* Sidebar Column */
+.workspace-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 84px;
+}
+
+/* Sidebar Cards (Neubrutalist Block) */
+.sidebar-card {
+  background-color: var(--bg-card);
+  border: 3px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px 22px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sidebar-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+/* Tag Pill */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--color-primary);
+  color: #121212;
+  border: 2px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+  box-shadow: 2px 2px 0 var(--shadow-color);
+}
+
+.tag-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #121212;
+  border-radius: var(--radius-circle);
+}
+
+.hero-card .page-title {
+  text-align: left;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  margin-bottom: 12px;
+  color: var(--text-main);
+}
+
+.hero-card .page-desc {
+  text-align: left;
+  font-size: 0.92rem;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+/* Aspect Ratio Guide Card */
+.sidebar-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: -0.02em;
+}
+
+.ratio-comparison-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background-color: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 18px 14px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.ratio-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ratio-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  border: 1.5px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.danger-badge {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+[data-theme="dark"] .danger-badge {
+  background-color: #7F1D1D;
+  color: #FEE2E2;
+}
+
+.success-badge {
+  background-color: #DCFCE7;
+  color: #166534;
+}
+
+[data-theme="dark"] .success-badge {
+  background-color: #14532D;
+  color: #DCFCE7;
+}
+
+.ratio-box {
+  border: 2.5px solid var(--border-color);
+  background-color: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--shadow-color);
+}
+
+.square-box {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+}
+
+.vertical-box {
+  width: 54px;
+  height: 72px;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-primary);
+  color: #121212;
+}
+
+.ratio-divider {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.ratio-caption {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.ratio-guide-note {
+  font-size: 0.82rem;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+
+/* Security Checklist */
+.security-checklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.security-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-sub);
+}
+
+.security-check-item .check-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: var(--status-online);
+  color: #121212;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  font-size: 0.72rem;
+  font-weight: 900;
+  flex-shrink: 0;
+  margin-top: 1px;
+  box-shadow: 1px 1px 0 var(--shadow-color);
+}
+
+.security-check-item strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+/* Secondary Feature Cards */
+.desktop-feature-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 10px;
+}
+
+.feature-card {
+  background-color: var(--bg-card);
+  border: 3px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 26px 24px;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.feature-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+.feature-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.feature-step-tag {
+  align-self: flex-start;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background-color: var(--color-primary);
+  border: 1.5px solid var(--border-color);
+  color: #121212;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  box-shadow: 1px 1px 0 var(--shadow-color);
+}
+
+.feature-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.feature-desc {
+  font-size: 0.88rem;
+  color: var(--text-sub);
+  line-height: 1.6;
 }
 
 /* Neubrutalist Card Panel */
@@ -342,6 +619,15 @@ button, input, select, textarea {
   box-shadow: var(--shadow-card);
   position: relative;
   width: 100%;
+}
+
+/* Desktop vs Mobile Toggle */
+.mobile-only-intro {
+  display: none !important;
+}
+
+.mobile-only-note {
+  display: none !important;
 }
 
 .header-intro {
@@ -1407,10 +1693,43 @@ button, input, select, textarea {
 
 /* ==========================================================================
    Responsive Reflow System (DESIGN.md & antislop-layoutmobile)
-   Breakpoints: 768px (Tablet) -> 600px (Mobile) -> 420px (Small Mobile)
+   Breakpoints: 991px (Tablet) -> 768px (Phablet) -> 600px (Mobile) -> 420px (Small Mobile)
    ========================================================================== */
 
-/* 1. Tablet & Phablet Breakpoint (<= 768px) */
+/* 1. Tablet & Medium Screen Breakpoint (<= 991px) */
+@media (max-width: 991px) {
+  .desktop-workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    max-width: 720px;
+    margin: 0 auto 30px;
+  }
+
+  .workspace-sidebar {
+    display: none;
+  }
+
+  .mobile-only-intro {
+    display: block !important;
+  }
+
+  .mobile-only-note {
+    display: flex !important;
+  }
+
+  .card-panel {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .desktop-feature-cards {
+    grid-template-columns: 1fr;
+    max-width: 720px;
+    margin: 20px auto 0;
+  }
+}
+
+/* 2. Phablet Breakpoint (<= 768px) */
 @media (max-width: 768px) {
   .main-content {
     margin: 24px auto 36px;
