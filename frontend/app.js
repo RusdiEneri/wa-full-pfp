@@ -280,10 +280,10 @@ async function checkBackendHealth() {
       serverStatusText.textContent = 'Backend Online (Siap)';
       // Ambil konfigurasi publik dari backend saat online
       fetchBackendConfig();
-    } else if (res.status === 502 || res.status === 503 || res.status === 504) {
+    } else if (res.status === 502 || res.status === 503 || res.status === 504 || res.status === 429) {
       isWakingUp = true;
       serverStatusBtn.className = 'status-indicator status-waking';
-      serverStatusText.textContent = 'Membangunkan Server (~25d)...';
+      serverStatusText.textContent = res.status === 429 ? 'Menunggu Antrean Server...' : 'Membangunkan Server (~25d)...';
       setTimeout(checkBackendHealth, 4000);
     } else {
       throw new Error(`Status ${res.status}`);
@@ -645,6 +645,14 @@ function handleError(errorMessage) {
     state.socket = null;
   }
   resetTurnstile();
+
+  if (typeof errorMessage === 'string') {
+    const lower = errorMessage.toLowerCase();
+    if (lower.includes('zerogpu') || lower.includes('runs limit') || lower.includes('quota')) {
+      errorMessage = 'Batas kuota GPU Hugging Face tercapai pada sesi ini. Server WhatsApp Go berjalan tanpa GPU. Silakan muat ulang halaman atau akses langsung melalui domain aplikasi.';
+    }
+  }
+
   alert(errorMessage);
   setStep(1);
 }

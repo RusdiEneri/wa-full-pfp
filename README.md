@@ -5,6 +5,7 @@ colorFrom: yellow
 colorTo: red
 sdk: gradio
 app_file: app.py
+app_port: 7860
 pinned: true
 license: mit
 short_description: Pasang foto profil WhatsApp ukuran penuh No Crop HD.
