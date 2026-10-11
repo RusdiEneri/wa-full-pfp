@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <meta name="theme-color" content="#111b21">
+  <meta name="theme-color" content="#FFEB3B">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -38,7 +38,10 @@
   <meta name="twitter:description" content="Pasang foto profil WhatsApp ukuran penuh tanpa terpotong secara instan dan aman.">
   <meta name="twitter:image" content="https://ppfull.mangrusdi.my.id/icon-512.png">
 
-  <!-- Google Search Console Structured Data (JSON-LD) -->
+  <!-- Google Search Console Verification -->
+  <meta name="google-site-verification" content="GSC_VERIFICATION_TOKEN">
+
+  <!-- Schema.org Structured Data (WebSite, WebApplication, Organization, BreadcrumbList) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -50,6 +53,31 @@
         "name": "WA Full Profile Picture",
         "description": "Pasang foto profil WhatsApp ukuran penuh tanpa terpotong (No Crop) dan resolusi tinggi HD.",
         "inLanguage": "id-ID"
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://ppfull.mangrusdi.my.id/#organization",
+        "name": "WA Full Profile",
+        "url": "https://ppfull.mangrusdi.my.id/",
+        "logo": "https://ppfull.mangrusdi.my.id/icon-512.png"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://ppfull.mangrusdi.my.id/#breadcrumbs",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Beranda",
+            "item": "https://ppfull.mangrusdi.my.id/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Alat Pasang Foto Profil Penuh",
+            "item": "https://ppfull.mangrusdi.my.id/#app"
+          }
+        ]
       },
       {
         "@type": "WebApplication",
@@ -69,10 +97,10 @@
   }
   </script>
   
-  <!-- Google Fonts: Inter -->
+  <!-- Google Fonts: Inter & JetBrains Mono (Neubrutalism Stack) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
   
@@ -337,7 +365,7 @@
         <section id="view-success" class="stage-view hidden">
           <div class="done-panel">
             <div class="done-icon-circle">
-              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#25d366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </div>
@@ -349,7 +377,7 @@
 
             <div class="security-card">
               <div class="shield-badge">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#00a884" stroke-width="2">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 </svg>
               </div>

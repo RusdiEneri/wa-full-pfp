@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -100,6 +101,26 @@ func verifyTurnstileToken(secretKey, token, remoteIP string) (bool, error) {
 	return true, nil
 }
 
+func getClientIP(r *http.Request) string {
+	if cfIP := r.Header.Get("CF-Connecting-IP"); cfIP != "" {
+		return strings.TrimSpace(cfIP)
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		if len(parts) > 0 {
+			return strings.TrimSpace(parts[0])
+		}
+	}
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
 // registerConfigEndpoint exposes public configuration (e.g. Turnstile site key) to the frontend
 func registerConfigEndpoint(mux *http.ServeMux) {
 	mux.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +169,22 @@ func main() {
 	frontendSub, err := fs.Sub(embeddedFrontend, "frontend")
 	if err == nil {
 		fileServer := http.FileServer(http.FS(frontendSub))
-		mux.Handle("/", fileServer)
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			cleanPath := strings.TrimPrefix(filepath.Clean(r.URL.Path), string(filepath.Separator))
+			cleanPath = strings.ReplaceAll(cleanPath, "\\", "/")
+			if cleanPath == "" || cleanPath == "." {
+				cleanPath = "index.html"
+			}
+			if _, statErr := fs.Stat(frontendSub, cleanPath); os.IsNotExist(statErr) {
+				w.WriteHeader(http.StatusNotFound)
+				if notFoundData, readErr := fs.ReadFile(frontendSub, "404.html"); readErr == nil {
+					w.Header().Set("Content-Type", "text/html; charset=utf-8")
+					_, _ = w.Write(notFoundData)
+					return
+				}
+			}
+			fileServer.ServeHTTP(w, r)
+		})
 	} else {
 		log.Printf("Warning: Failed to load embedded frontend: %v. Serving disk frontend/ if exists.", err)
 		mux.Handle("/", http.FileServer(http.Dir("./frontend")))
@@ -224,14 +260,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Validasi keamanan Cloudflare Turnstile jika diaktifkan di server
 	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
 	if secretKey != "" {
-		clientIP := r.Header.Get("CF-Connecting-IP")
-		if clientIP == "" {
-			clientIP = r.Header.Get("X-Forwarded-For")
-		}
-		if clientIP == "" {
-			clientIP = strings.Split(r.RemoteAddr, ":")[0]
-		}
-
+		clientIP := getClientIP(r)
 		ok, err := verifyTurnstileToken(secretKey, inMsg.TurnstileToken, clientIP)
 		if !ok || err != nil {
 			log.Printf("[WS] Turnstile verification failed for %s: %v", r.RemoteAddr, err)

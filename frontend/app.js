@@ -1,6 +1,19 @@
-/**
- * WhatsApp Full Profile Picture - Frontend Application
- */
+function trackEvent(eventName, eventParams = {}) {
+  try {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, eventParams);
+    }
+    if (Array.isArray(window.dataLayer)) {
+      window.dataLayer.push({ event: eventName, ...eventParams });
+    }
+    if (typeof window.fbq === 'function') {
+      window.fbq('trackCustom', eventName, eventParams);
+    }
+    window.dispatchEvent(new CustomEvent('app_event', { detail: { name: eventName, params: eventParams } }));
+  } catch (e) {
+    // Ignore analytics errors
+  }
+}
 
 const DEFAULT_HF_BACKEND = 'https://ilhamdev-wa-full-pfp.hf.space';
 
@@ -151,6 +164,9 @@ function resetTurnstile() {
   updateStartButtonState();
 }
 
+let turnstileRetryCount = 0;
+const MAX_TURNSTILE_RETRIES = 10;
+
 function renderTurnstileWidget() {
   if (!state.turnstileEnabled || !state.turnstileSiteKey) {
     if (turnstileWrapper) turnstileWrapper.classList.add('hidden');
@@ -162,18 +178,20 @@ function renderTurnstileWidget() {
 
   if (window.turnstile) {
     if (state.turnstileWidgetId !== null) {
-      return; // Sudah dirender
+      return;
     }
     try {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'auto';
       state.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
         sitekey: state.turnstileSiteKey,
-        theme: 'dark',
+        theme: currentTheme,
         callback: (token) => {
           state.turnstileToken = token;
           if (turnstileFeedback) {
             turnstileFeedback.textContent = 'Verifikasi keamanan berhasil.';
             turnstileFeedback.className = 'turnstile-feedback success';
           }
+          trackEvent('turnstile_success');
           updateStartButtonState();
         },
         'expired-callback': () => {
@@ -200,8 +218,15 @@ function renderTurnstileWidget() {
       console.error('[Turnstile] Gagal inisialisasi render widget:', err);
     }
   } else {
-    // Skrip Turnstile mungkin masih loading dari CDN Cloudflare
-    setTimeout(renderTurnstileWidget, 300);
+    turnstileRetryCount++;
+    if (turnstileRetryCount <= MAX_TURNSTILE_RETRIES) {
+      setTimeout(renderTurnstileWidget, 300);
+    } else {
+      if (turnstileFeedback) {
+        turnstileFeedback.textContent = 'Gagal memuat Cloudflare Turnstile. Periksa koneksi internet atau matikan ad-blocker.';
+        turnstileFeedback.className = 'turnstile-feedback error';
+      }
+    }
   }
 }
 
@@ -337,10 +362,17 @@ function initDropZone() {
 
 function handleSelectedFile(file) {
   if (!file.type.startsWith('image/')) {
-    alert('File harus berupa gambar (JPG, PNG, atau WEBP).');
+    alert('File harus berupa gambar dengan format JPG, PNG, atau WEBP.');
     return;
   }
 
+  const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+  if (file.size > MAX_FILE_SIZE) {
+    alert('Ukuran file terlalu besar (maksimal 15 MB). Silakan pilih foto dengan ukuran lebih kecil.');
+    return;
+  }
+
+  trackEvent('image_selected', { name: file.name, size: file.size });
   fileNameDisplay.textContent = file.name;
 
   const reader = new FileReader();
@@ -405,6 +437,7 @@ function initTabs() {
     tabQr.classList.add('active');
     tabPhone.classList.remove('active');
     phoneInputGroup.classList.add('hidden');
+    trackEvent('click_whatsapp', { method: 'qr' });
   });
 
   tabPhone.addEventListener('click', () => {
@@ -413,6 +446,7 @@ function initTabs() {
     tabQr.classList.remove('active');
     phoneInputGroup.classList.remove('hidden');
     inputPhoneNumber.focus();
+    trackEvent('click_whatsapp', { method: 'phone' });
   });
 
   // Realtime phone input sanitizer
@@ -478,18 +512,19 @@ function startProcess() {
   let pairNumber = '';
   if (state.connectionMethod === 'phone') {
     pairNumber = inputPhoneNumber.value.trim().replace(/\D+/g, '');
-    if (!pairNumber || pairNumber.length < 9) {
-      alert('Masukkan nomor WhatsApp yang valid (termasuk kode negara, misal: 628123456789).');
+    if (!pairNumber || pairNumber.length < 9 || pairNumber.length > 16) {
+      alert('Masukkan nomor WhatsApp yang valid (termasuk kode negara, minimal 9 digit, misal: 628123456789).');
       inputPhoneNumber.focus();
       return;
     }
   }
 
-  // Switch to Scan View
+  trackEvent('click_cta', { cta: 'start_profile_process' });
+  trackEvent('form_submit', { method: state.connectionMethod, has_phone: !!pairNumber });
+
   setStep(2);
   state.isProcessing = true;
 
-  // Reset QR & Pairing displays
   qrImage.classList.add('hidden');
   qrSpinner.classList.remove('hidden');
   liveStatusMessage.textContent = 'Menghubungkan ke server...';
@@ -515,11 +550,13 @@ function startProcess() {
 
   state.socket.onopen = () => {
     liveStatusMessage.textContent = 'Mengirim gambar ke server...';
+    const sentToken = state.turnstileToken || '';
+    state.turnstileToken = null; // Token Turnstile hanya berlaku satu kali
     const payload = {
       action: 'start',
       image: state.currentImageBase64,
       pair_number: pairNumber,
-      turnstile_token: state.turnstileToken || '',
+      turnstile_token: sentToken,
     };
     state.socket.send(JSON.stringify(payload));
   };
@@ -582,6 +619,7 @@ function handleServerMessage(msg) {
         state.socket = null;
       }
       resetTurnstile();
+      trackEvent('process_success', { method: state.connectionMethod });
       setStep(3);
       break;
 
@@ -624,6 +662,7 @@ function cancelSession() {
 }
 
 function restartApp() {
+  trackEvent('click_cta', { cta: 'restart_app' });
   state.isProcessing = false;
   if (state.socket) {
     state.socket.close();
@@ -693,6 +732,7 @@ function initCopyButton() {
     if (!raw || raw === '------') return;
     try {
       await navigator.clipboard.writeText(raw);
+      trackEvent('click_whatsapp', { action: 'copy_pairing_code' });
       if (copyBtnText) copyBtnText.textContent = 'Tersalin!';
       setTimeout(() => {
         if (copyBtnText) copyBtnText.textContent = 'Salin';

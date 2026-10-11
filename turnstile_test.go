@@ -91,3 +91,27 @@ func TestWebSocket_TurnstileRejection(t *testing.T) {
 		t.Fatalf("expected error message mentioning Turnstile, got: type=%s, message=%s", outMsg.Type, outMsg.Message)
 	}
 }
+
+func TestGetClientIP(t *testing.T) {
+	// CF-Connecting-IP takes highest precedence
+	req1 := httptest.NewRequest("GET", "/", nil)
+	req1.Header.Set("CF-Connecting-IP", "103.21.244.2")
+	req1.Header.Set("X-Forwarded-For", "198.51.100.1, 198.51.100.2")
+	if ip := getClientIP(req1); ip != "103.21.244.2" {
+		t.Errorf("expected CF-Connecting-IP, got %s", ip)
+	}
+
+	// Comma-separated X-Forwarded-For extracts first client IP
+	req2 := httptest.NewRequest("GET", "/", nil)
+	req2.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18, 150.172.238.178")
+	if ip := getClientIP(req2); ip != "203.0.113.195" {
+		t.Errorf("expected first X-Forwarded-For IP, got %s", ip)
+	}
+
+	// IPv6 RemoteAddr safely parsed
+	req3 := httptest.NewRequest("GET", "/", nil)
+	req3.RemoteAddr = "[2001:db8::1]:54321"
+	if ip := getClientIP(req3); ip != "2001:db8::1" {
+		t.Errorf("expected IPv6 host, got %s", ip)
+	}
+}
