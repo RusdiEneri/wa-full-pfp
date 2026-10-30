@@ -1270,8 +1270,6 @@ button, input, select, textarea {
 }
 
 .qr-canvas-holder {
-  width: min(260px, 75vw);
-  height: min(260px, 75vw);
   margin: 0 auto 24px;
   background-color: #FFFFFF;
   border-radius: var(--radius-md);
@@ -1285,10 +1283,18 @@ button, input, select, textarea {
 }
 
 .qr-visual {
-  width: 100%;
-  height: 100%;
+  /* 345 px = 69 modul (QR 61 modul + quiet zone 4 modul di tiap sisi) x 5 px.
+     Batas bawah 4 px per modul (276 px) karena di bawah itu kamera ponsel
+     sering gagal membaca pola QR. Nilai vw memakai 86vw agar di layar 360 px
+     gambar tetap 276-310 px. */
+  width: clamp(276px, 86vw, 345px);
+  height: auto;
+  aspect-ratio: 1 / 1;
   display: block;
-  image-rendering: pixelated;
+  /* Jangan pakai pixelated: pembesaran non-integer membuat lebar modul tidak seragam
+     dan pola QR sulit dikenali kamera. Biarkan browser memakai interpolasi halus. */
+  image-rendering: auto;
+  object-fit: contain;
 }
 
 .loader-box {
@@ -1827,8 +1833,14 @@ button, input, select, textarea {
   }
 
   .qr-canvas-holder {
-    width: min(250px, 75vw);
-    height: min(250px, 75vw);
+    width: auto;
+    height: auto;
+    padding: 8px;
+  }
+
+  .qr-visual {
+    /* 276 px = 69 modul x 4 px, batas minimum agar QR masih terbaca kamera. */
+    width: clamp(276px, 92vw, 345px);
   }
 }
 

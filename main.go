@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"io/fs"
 	"log"
 	"net"
@@ -311,7 +313,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[Session %s] Membersihkan sesi...", sessionID)
 		if !loggedOut && client != nil && client.Store != nil && client.Store.ID != nil {
 			log.Printf("[Session %s] Fallback cleanup: memastikan sesi di-logout...", sessionID)
-			logoutSession(client, sessionID)
+			if err := logoutSession(client, sessionID); err != nil {
+				log.Printf("[Session %s] Fallback cleanup gagal: %v", sessionID, err)
+			}
 		}
 		if client != nil && client.IsConnected() {
 			client.Disconnect()
@@ -564,11 +568,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					break qrLoop
 				}
 				if evt.Event == "code" {
-					// Generate QR Code PNG image
+					// QR dikirim sebagai PNG dengan modul berukuran piksel bulat.
 					qrImageBase64 := ""
-					qrCodeObj, qrErr := qr.Encode(evt.Code, qr.L)
-					if qrErr == nil {
-						pngBytes := qrCodeObj.PNG()
+					if pngBytes, qrErr := renderQRCode(evt.Code); qrErr != nil {
+						log.Printf("[Session %s] Gagal membuat gambar QR: %v", sessionID, qrErr)
+					} else {
 						qrImageBase64 = "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngBytes)
 					}
 
@@ -654,65 +658,185 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Message: "Foto profil sukses terpasang! Mengeluarkan sesi WhatsApp otomatis demi keamanan...",
 	})
 
-	logoutSession(client, sessionID)
-	loggedOut = true
-
-	_ = wsjson.Write(ctx, c, WSOutgoingMessage{
-		Type:    "success",
-		Message: "Selamat! Foto profil berhasil diubah menjadi ukuran penuh (tanpa compress), dan sesi WhatsApp telah otomatis keluar (logged out).",
-	})
+	logoutErr := logoutSession(client, sessionID)
+	if logoutErr == nil {
+		loggedOut = true
+		_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+			Type:    "success",
+			Message: "Selamat! Foto profil berhasil diubah menjadi ukuran penuh (tanpa compress), dan sesi WhatsApp telah otomatis keluar (logged out).",
+		})
+	} else {
+		log.Printf("[Session %s] Peringatan: sesi belum tercabut dari perangkat tertaut: %v", sessionID, logoutErr)
+		_ = wsjson.Write(ctx, c, WSOutgoingMessage{
+			Type:    "error",
+			Message: "Foto profil berhasil dipasang, tetapi sesi WhatsApp belum tercabut dari Perangkat Tertaut. Buka WhatsApp di HP Anda lalu hapus perangkat secara manual.",
+		})
+	}
 
 	_ = c.Close(websocket.StatusNormalClosure, "done")
 }
 
+// renderQRCode menghasilkan PNG QR code dengan lebar modul bilangan bulat.
+//
+// rsc.io/qr selalu memakai skala tetap 8 px per modul dan selalu memakai mask 0
+// (lihat qr.go: "TODO: Pick appropriate mask"). Ukuran gambar hasilnya lalu
+// diskalakan ulang oleh browser ke ukuran kotak QR, dan pembesaran non-integer
+// membuat lebar modul tidak seragam sehingga kamera ponsel gagal membaca pola.
+// Di sini kita encode ulang bitmap QR dengan skala eksplisit yang bulat supaya
+// setiap modul menempati jumlah piksel yang sama persis.
+func renderQRCode(payload string) ([]byte, error) {
+	code, err := qr.Encode(payload, qr.L)
+	if err != nil {
+		return nil, fmt.Errorf("gagal encode QR: %w", err)
+	}
+
+	// Jumlah modul + quiet zone 4 modul di setiap sisi.
+	const quietZone = 4
+	// 10 px per modul menghasilkan PNG 690 px untuk QR 61 modul. Resolusi ini
+	// tetap tajam di layar ber-DPR tinggi (retina) tanpa pembesaran ulang.
+	const moduleScale = 10
+
+	totalModules := code.Size + quietZone*2
+	side := totalModules * moduleScale
+
+	// Gambar grayscale 8-bit tanpa transparansi agar kontras hitam-putih maksimal.
+	img := image.NewGray(image.Rect(0, 0, side, side))
+	for i := range img.Pix {
+		img.Pix[i] = 0xFF
+	}
+	offset := quietZone * moduleScale
+	for y := 0; y < code.Size; y++ {
+		for x := 0; x < code.Size; x++ {
+			if !code.Black(x, y) {
+				continue
+			}
+			for py := 0; py < moduleScale; py++ {
+				rowStart := img.PixOffset(offset+x*moduleScale, offset+y*moduleScale+py)
+				for px := 0; px < moduleScale; px++ {
+					img.Pix[rowStart+px] = 0x00
+				}
+			}
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, fmt.Errorf("gagal encode PNG QR: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 // logoutSession attempts to cleanly unlink the companion device session from WhatsApp servers.
-// If the websocket is not yet connected or during temporary reconnects, it waits and retries.
-func logoutSession(client *whatsmeow.Client, sessionID string) {
-	if client == nil || client.Store == nil || client.Store.ID == nil {
-		return
+// If the websocket is not yet connected or during temporary reconnects, it reconnects and retries.
+// Returns nil only when the unlink request was accepted by the server (or the session no longer exists).
+func logoutSession(client *whatsmeow.Client, sessionID string) error {
+	if client == nil || client.Store == nil {
+		return errors.New("client atau device store tidak tersedia")
+	}
+	if client.Store.ID == nil || client.Store.GetJID().IsEmpty() {
+		log.Printf("[Session %s] Sesi device ID sudah tidak ada di store, logout dianggap selesai.", sessionID)
+		return nil
 	}
 
 	log.Printf("[Session %s] Memulai proses auto-logout dari WhatsApp...", sessionID)
 
-	for attempt := 1; attempt <= 3; attempt++ {
-		if client.Store == nil || client.Store.ID == nil || client.Store.GetJID().IsEmpty() {
-			log.Printf("[Session %s] Sesi device ID sudah tidak ada di store, logout dianggap selesai.", sessionID)
-			return
+	// Batas waktu total agar pemanggil (termasuk deferred cleanup) tidak menggantung.
+	deadline := time.Now().Add(25 * time.Second)
+	var lastErr error
+
+	for attempt := 1; attempt <= 5; attempt++ {
+		if time.Now().After(deadline) {
+			lastErr = errors.New("batas waktu auto-logout habis")
+			break
+		}
+		if client.Store == nil || client.Store.ID == nil {
+			log.Printf("[Session %s] Device store sudah terhapus, logout dianggap selesai.", sessionID)
+			return nil
 		}
 
-		// Pastikan websocket connected & logged in sebelum mengirim remove-companion-device
+		// Pastikan websocket connected & logged in sebelum mengirim remove-companion-device.
+		// Setelah pairing, whatsmeow melakukan restart stream (515) sehingga koneksi bisa
+		// sedang tidak siap tepat saat logout diminta.
 		if !client.IsConnected() || !client.IsLoggedIn() {
-			log.Printf("[Session %s] Menunggu koneksi terotentikasi untuk logout (percobaan %d/3)...", sessionID, attempt)
-			_ = client.Connect()
-			for i := 0; i < 15; i++ {
+			log.Printf("[Session %s] Koneksi belum siap untuk logout, mencoba menyambung ulang (percobaan %d/5)...", sessionID, attempt)
+
+			connectBudget := time.Until(deadline)
+			if connectBudget > 8*time.Second {
+				connectBudget = 8 * time.Second
+			}
+			if connectBudget < time.Second {
+				lastErr = errors.New("batas waktu auto-logout habis sebelum menyambung")
+				break
+			}
+
+			connectCtx, connectCancel := context.WithTimeout(context.Background(), connectBudget)
+			err := client.ConnectContext(connectCtx)
+			connectCancel()
+
+			// ErrAlreadyConnected berarti socket masih hidup, cukup tunggu siap.
+			if err != nil && !errors.Is(err, whatsmeow.ErrAlreadyConnected) {
+				log.Printf("[Session %s] Gagal menyambung ulang untuk logout: %v", sessionID, err)
+			}
+
+			readyUntil := time.Now().Add(connectBudget)
+			for time.Now().Before(readyUntil) {
 				if client.IsConnected() && client.IsLoggedIn() {
 					break
 				}
-				time.Sleep(200 * time.Millisecond)
+				time.Sleep(150 * time.Millisecond)
 			}
 		}
 
-		logoutCtx, logoutCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		if !client.IsConnected() || !client.IsLoggedIn() {
+			lastErr = errors.New("koneksi terotentikasi belum siap")
+			log.Printf("[Session %s] Koneksi terotentikasi belum siap pada percobaan %d, mengulang...", sessionID, attempt)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		requestBudget := time.Until(deadline)
+		if requestBudget > 12*time.Second {
+			requestBudget = 12 * time.Second
+		}
+		if requestBudget < time.Second {
+			lastErr = errors.New("batas waktu auto-logout habis sebelum mengirim permintaan")
+			break
+		}
+
+		logoutCtx, logoutCancel := context.WithTimeout(context.Background(), requestBudget)
 		err := client.Logout(logoutCtx)
 		logoutCancel()
 
 		if err == nil {
 			log.Printf("[Session %s] Berhasil logout dari server WhatsApp pada percobaan %d.", sessionID, attempt)
-			return
+			return nil
 		}
 
+		lastErr = err
 		log.Printf("[Session %s] Gagal logout pada percobaan %d: %v", sessionID, attempt, err)
 
 		errMsg := strings.ToLower(err.Error())
-		if strings.Contains(errMsg, "device_removed") || strings.Contains(errMsg, "logged out") || strings.Contains(errMsg, "doesn't contain a device jid") {
+		if errors.Is(err, whatsmeow.ErrNotLoggedIn) ||
+			strings.Contains(errMsg, "device_removed") ||
+			strings.Contains(errMsg, "logged out") ||
+			strings.Contains(errMsg, "doesn't contain a device jid") {
 			log.Printf("[Session %s] Sesi telah berhasil dicabut oleh server WhatsApp.", sessionID)
-			return
+			return nil
 		}
 
-		time.Sleep(1 * time.Second)
+		// Server sempat menutup socket di tengah permintaan logout: pastikan sambung ulang.
+		if !client.IsConnected() {
+			log.Printf("[Session %s] Koneksi tertutup saat logout, menyambung ulang...", sessionID)
+		}
+
+		time.Sleep(500 * time.Millisecond)
 	}
 
-	log.Printf("[Session %s] Peringatan: Auto-logout selesai dengan status error.", sessionID)
+	log.Printf("[Session %s] Peringatan: auto-logout belum berhasil: %v", sessionID, lastErr)
+	if lastErr == nil {
+		lastErr = errors.New("auto-logout belum berhasil")
+	}
+	return fmt.Errorf("auto-logout gagal: %w", lastErr)
 }
 
 // waitForAuthenticatedSession menunggu hingga client WhatsApp terhubung dan terotentikasi penuh pasca-pairing.
